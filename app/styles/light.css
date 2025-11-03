@@ -1,0 +1,59 @@
+/* Make It Social — Light Theme (Retro‑Modern Pop) */
+@plugin "daisyui/theme" {
+  name: "light-fish";
+  default: true;
+  color-scheme: light;
+  prefersdark: false;
+
+  /* Core brand palette */
+  --color-primary:            #EC3C4E; /* Raspberry Red */
+  --color-primary-content:    #F4F6F9;
+
+  --color-secondary:          #24B5C9; /* Deep Teal */
+  --color-secondary-content:  #F4F6F9;
+
+  --color-accent:             #F7D060; /* Muted Gold */
+  --color-accent-content:     #0F1115;
+
+  --color-neutral:            #0F1115; /* Carbon (headlines, borders) */
+  --color-neutral-content:    #F4F6F9;
+
+  /* Base surfaces (calm paper) */
+  --color-base-100:           #F9F6F3; /* Parchment */
+  --color-base-200:           #EFEAE4; /* deeper paper tint */
+  --color-base-300:           #E6DFD7; /* card/elevated */
+  --color-base-content:       #14161B; /* ink on light */
+
+  /* Feedback / status (restrained, accessible) */
+  --color-info:               #3AA0FF; /* calm editorial blue */
+  --color-info-content:       #F4F6F9;
+  --color-success:            #2ED07F; /* classic green */
+  --color-success-content:    #0B0D10;
+  --color-warning:            #FFB84A; /* toned amber */
+  --color-warning-content:    #0B0D10;
+  --color-error:              #FF5C73; /* deeper raspberry for errors */
+  --color-error-content:      #FFFFFF;
+
+  /* Shape + motion */
+  --rounded-box:              1.25rem; /* 20px */
+  --rounded-btn:              1rem;    /* 16px */
+  --rounded-badge:            0.75rem;
+  --btn-text-case:            none;
+  --tab-radius:               0.85rem;
+  --animation-btn:            0.18s;
+
+  /* Shadows tuned for warm light theme */
+  --shadow-lg:              0 6px 20px rgba(16, 17, 20, 0.08);
+  --shadow-float:             0 12px 28px rgba(16, 17, 20, 0.12);
+
+  /* Playful glow accents (subtle, not neon) */
+  --glow-primary:             0 0 0 rgba(0,0,0,0), 0 12px 28px color-mix(in srgb, var(--color-primary) 32%, transparent);
+  --glow-secondary:           0 10px 24px color-mix(in srgb, var(--color-secondary) 22%, transparent);
+  --glow-accent:              0 10px 24px color-mix(in srgb, var(--color-accent) 26%, transparent);
+
+}
+
+/* Optional helpers */
+/* :is(.btn-primary){ box-shadow: var(--glow-primary); }
+:is(.btn-secondary){ box-shadow: var(--glow-secondary); }
+:is(.btn-accent){ box-shadow: var(--glow-accent); } */
