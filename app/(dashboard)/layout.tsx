@@ -1,3 +1,4 @@
+import { ContextSwitcher } from '@/components/context-switcher';
 import { Sidebar } from '@/components/sidebar';
 
 export default function DashboardLayout({
@@ -9,16 +10,16 @@ export default function DashboardLayout({
         <div className="drawer lg:drawer-open">
             <input id="sidebar-drawer" type="checkbox" className="drawer-toggle" />
 
-            <div className="drawer-content flex flex-col min-h-screen">
+            <div className="drawer-content bg-base-200">
 
                 {/* Main Content */}
-                <main className="flex-1 bg-base-200">
-                    {children}
-                </main>
+                {children}
             </div>
 
             {/* Sidebar */}
-            <Sidebar />
+            <div className='drawer-side is-drawer-close:overflow-visible'>
+                <Sidebar />
+            </div>
         </div>
     );
 }

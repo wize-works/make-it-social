@@ -1,25 +1,23 @@
-import type { Post } from '@/types';
+import type { TopPostResponse } from '@/types';
 
 interface TopPostsProps {
-    posts: Post[];
+    posts: TopPostResponse[];
 }
 
 export function TopPosts({ posts }: TopPostsProps) {
-    const formatDate = (date: Date | undefined): string => {
-        if (!date) return 'Not published';
-        return new Date(date).toLocaleDateString('en-US', {
+    const formatDate = (dateString: string): string => {
+        if (!dateString) return 'Not published';
+        return new Date(dateString).toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
             year: 'numeric',
         });
     };
 
-    // Mock engagement data for display (deterministic based on post id)
-    const getEngagement = (post: Post): number => {
-        // In real app, this would come from analytics data
-        // Use hash of post id for consistent values
-        const hash = post.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-        return (hash % 900) + 100;
+    const formatNumber = (num: number): string => {
+        if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+        if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+        return num.toString();
     };
 
     if (posts.length === 0) {
@@ -45,73 +43,63 @@ export function TopPosts({ posts }: TopPostsProps) {
                             <tr>
                                 <th>Content</th>
                                 <th>Published</th>
-                                <th>Platforms</th>
+                                <th>Reach</th>
                                 <th>Engagement</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {posts.map((post, index) => {
-                                const engagement = getEngagement(post);
-                                return (
-                                    <tr key={post.id} className="hover">
-                                        <td>
-                                            <div className="flex items-center gap-3">
-                                                <div className="badge badge-neutral badge-sm">
-                                                    #{index + 1}
+                            {posts.map((post, index) => (
+                                <tr key={post.postId} className="hover">
+                                    <td>
+                                        <div className="flex items-center gap-3">
+                                            <div className="badge badge-neutral badge-sm">
+                                                #{index + 1}
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="font-medium line-clamp-2">
+                                                    {post.content || 'No content available'}
                                                 </div>
-                                                <div className="flex-1">
-                                                    <div className="font-medium line-clamp-1">
-                                                        {post.content.substring(0, 60)}
-                                                        {post.content.length > 60 && '...'}
-                                                    </div>
-                                                    {post.mediaUrls.length > 0 && (
-                                                        <div className="text-xs opacity-70 mt-1">
-                                                            <i className="fa-solid fa-duotone fa-image mr-1"></i>
-                                                            {post.mediaUrls.length} media
-                                                        </div>
-                                                    )}
+                                                <div className="text-xs opacity-70 mt-1">
+                                                    <i className={`fa-brands fa-${post.platform} mr-1`}></i>
+                                                    {post.platform}
                                                 </div>
                                             </div>
-                                        </td>
-                                        <td>
-                                            <div className="text-sm">
-                                                {formatDate(post.scheduledTime)}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div className="text-sm">
+                                            {formatDate(post.publishedAt)}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div className="space-y-1">
+                                            <div className="text-sm font-medium">
+                                                {formatNumber(post.reach)} reach
                                             </div>
-                                        </td>
-                                        <td>
-                                            <div className="flex items-center gap-1">
-                                                {post.targets.slice(0, 3).map(target => (
-                                                    <div
-                                                        key={target.id}
-                                                        className="badge badge-sm badge-outline"
-                                                    >
-                                                        <i className="fa-solid fa-duotone fa-hashtag text-xs"></i>
-                                                    </div>
-                                                ))}
-                                                {post.targets.length > 3 && (
-                                                    <span className="text-xs opacity-70">
-                                                        +{post.targets.length - 3}
-                                                    </span>
-                                                )}
+                                            <div className="text-xs opacity-70">
+                                                {formatNumber(post.impressions)} impressions
                                             </div>
-                                        </td>
-                                        <td>
-                                            <div className="flex items-center gap-2">
-                                                <div className="radial-progress text-primary" style={{ '--value': Math.min((engagement / 1000) * 100, 100), '--size': '2.5rem' } as React.CSSProperties} role="progressbar">
-                                                    <span className="text-xs font-bold">{engagement}</span>
-                                                </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div className="space-y-1">
+                                            <div className="text-sm font-bold text-primary">
+                                                {formatNumber(post.engagement)}
                                             </div>
-                                        </td>
-                                        <td>
-                                            <button className="btn btn-ghost btn-sm">
-                                                <i className="fa-solid fa-duotone fa-chart-simple"></i>
-                                                Details
-                                            </button>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                                            <div className="text-xs opacity-70">
+                                                {post.engagementRate.toFixed(2)}% rate
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <button className="btn btn-ghost btn-sm">
+                                            <i className="fa-solid fa-duotone fa-chart-simple"></i>
+                                            Details
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
                         </tbody>
                     </table>
                 </div>

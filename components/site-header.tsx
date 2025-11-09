@@ -2,12 +2,24 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
+import { usePathname } from 'next/navigation';
 import { useUser, useClerk } from '@clerk/nextjs';
 import { ThemeToggle } from './theme-toggle';
+import { OrganizationSwitcher } from './organization-switcher';
+import { ContextSwitcher } from './context-switcher';
 
 export function SiteHeader() {
     const { isSignedIn, user } = useUser();
     const { signOut } = useClerk();
+    const pathname = usePathname();
+
+    // Check if we're in the dashboard section
+    const isDashboard = pathname?.startsWith('/dashboard') ||
+        pathname?.startsWith('/calendar') ||
+        pathname?.startsWith('/analytics') ||
+        pathname?.startsWith('/workflow') ||
+        pathname?.startsWith('/inbox') ||
+        pathname?.startsWith('/compose');
 
     const handleSignOut = () => {
         signOut({ redirectUrl: '/' });
@@ -65,38 +77,42 @@ export function SiteHeader() {
                 </Link>
             </div>
 
-            {/* Desktop Navigation */}
+            {/* Desktop Navigation / Context Switcher */}
             <div className="navbar-center hidden lg:flex">
-                <ul className="menu menu-horizontal px-1">
-                    <li>
-                        <Link href="#features">
-                            <i className="fa-solid fa-duotone fa-sparkles"></i>
-                            Features
-                        </Link>
-                    </li>
-                    <li>
-                        <Link href="#pricing">
-                            <i className="fa-solid fa-duotone fa-tag"></i>
-                            Pricing
-                        </Link>
-                    </li>
-                    <li>
-                        <Link href="#about">
-                            <i className="fa-solid fa-duotone fa-info-circle"></i>
-                            About
-                        </Link>
-                    </li>
-                    <li>
-                        <Link href="#contact">
-                            <i className="fa-solid fa-duotone fa-envelope"></i>
-                            Contact
-                        </Link>
-                    </li>
-                </ul>
+                {(isDashboard && isSignedIn) ?? (
+                    <ul className="menu menu-horizontal px-1">
+                        <li>
+                            <Link href="#features">
+                                <i className="fa-solid fa-duotone fa-sparkles"></i>
+                                Features
+                            </Link>
+                        </li>
+                        <li>
+                            <Link href="#pricing">
+                                <i className="fa-solid fa-duotone fa-tag"></i>
+                                Pricing
+                            </Link>
+                        </li>
+                        <li>
+                            <Link href="#about">
+                                <i className="fa-solid fa-duotone fa-info-circle"></i>
+                                About
+                            </Link>
+                        </li>
+                        <li>
+                            <Link href="#contact">
+                                <i className="fa-solid fa-duotone fa-envelope"></i>
+                                Contact
+                            </Link>
+                        </li>
+                    </ul>
+                )}
             </div>
 
             {/* Right Side Actions */}
             <div className="navbar-end gap-2">
+                <ContextSwitcher />
+
                 <ThemeToggle />
 
                 {!isSignedIn ? (
@@ -148,7 +164,7 @@ export function SiteHeader() {
                                         {user?.primaryEmailAddress?.emailAddress}
                                     </span>
                                 </div>
-                                <i className="fa-solid fa-chevron-down text-xs opacity-60"></i>
+                                <i className="fa-solid fa-duotone fa-chevron-down text-xs opacity-60"></i>
                             </div>
                             <div
                                 tabIndex={0}

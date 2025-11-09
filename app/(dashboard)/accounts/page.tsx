@@ -1,15 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useSocialAccounts } from '@/hooks/use-social-accounts';
 import { AccountCard } from './components/account-card';
 import { AddAccountModal } from './components/add-account-modal';
 import { DisconnectModal } from './components/disconnect-modal';
-import { useToast } from '@/contexts/ToastContext';
+import { useToast } from '@/contexts/toast-context';
 
 export default function AccountsPage() {
     const [showAddModal, setShowAddModal] = useState(false);
     const [accountToDisconnect, setAccountToDisconnect] = useState<string | null>(null);
+    const searchParams = useSearchParams();
 
     const {
         activeAccounts,
@@ -18,10 +20,29 @@ export default function AccountsPage() {
         metrics,
         isLoading,
         disconnectAccount,
-        reconnectAccount
+        reconnectAccount,
+        refetch
     } = useSocialAccounts();
 
     const { showToast } = useToast();
+
+    // Handle OAuth callback
+    useEffect(() => {
+        const success = searchParams.get('success');
+        const error = searchParams.get('error');
+
+        if (success === 'true') {
+            showToast('Account connected successfully!', 'success');
+            // Refetch accounts to show the new one
+            refetch();
+            // Clean up URL params
+            window.history.replaceState({}, '', '/accounts');
+        } else if (error) {
+            showToast(`Failed to connect account: ${error}`, 'error');
+            // Clean up URL params
+            window.history.replaceState({}, '', '/accounts');
+        }
+    }, [searchParams, showToast, refetch]);
 
     const handleDisconnect = (accountId: string) => {
         setAccountToDisconnect(accountId);

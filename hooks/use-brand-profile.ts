@@ -4,43 +4,58 @@
 
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/lib/api-client';
-import { mockCompanies } from '@/data/companies';
-import { mockProducts } from '@/data/products';
-import type { BrandProfile, Company, Product } from '@/types';
+import type { BrandProfile, Product } from '@/types';
+import type { Company } from '@/types/company';
 
 export function useBrandProfile(organizationId?: string) {
     const [brandProfile, setBrandProfile] = useState<BrandProfile | null>(null);
+    const [companies, setCompanies] = useState<Company[]>([]);
+    const [products, setProducts] = useState<Product[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
-    // TODO: Replace with API calls when Company/Product APIs are ready
-    // For now, use mock data filtered by organization
-    const companies = useMemo(() => {
-        if (!organizationId) return [];
-        return mockCompanies.filter(c => c.organizationId === organizationId);
-    }, [organizationId]);
-
-    const products = useMemo(() => {
-        if (!organizationId) return [];
-        return mockProducts.filter(p =>
-            companies.some(c => c.id === p.companyId)
-        );
-    }, [organizationId, companies]);
-
     const fetchBrandProfile = useCallback(async () => {
-        if (!organizationId) return;
+        if (!organizationId) {
+            setCompanies([]);
+            setProducts([]);
+            setIsLoading(false);
+            return;
+        }
 
         try {
             setIsLoading(true);
             setError(null);
 
-            const data = await apiClient.brandProfile.get(organizationId);
-            setBrandProfile(data);
+            // Fetch companies and products in parallel
+            // Note: Brand profile API not implemented yet, so we skip it
+            const [companiesData, productsData] = await Promise.allSettled([
+                apiClient.companies.getAll(organizationId),
+                apiClient.products.getAll({ organizationId }),
+            ]);
+
+            // Set companies
+            if (companiesData.status === 'fulfilled') {
+                setCompanies(companiesData.value);
+            } else {
+                console.error('Error fetching companies:', companiesData.reason);
+                setCompanies([]);
+            }
+
+            // Set products
+            if (productsData.status === 'fulfilled') {
+                setProducts(productsData.value);
+            } else {
+                console.error('Error fetching products:', productsData.reason);
+                setProducts([]);
+            }
+
+            // Brand profile will be null until API is implemented
+            setBrandProfile(null);
         } catch (err) {
-            setError(err instanceof Error ? err : new Error('Failed to fetch brand profile'));
-            console.error('Error fetching brand profile:', err);
+            setError(err instanceof Error ? err : new Error('Failed to fetch brand data'));
+            console.error('Error fetching brand data:', err);
         } finally {
             setIsLoading(false);
         }

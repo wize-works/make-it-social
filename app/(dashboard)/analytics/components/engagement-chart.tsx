@@ -1,14 +1,10 @@
-import type { TrendDataPoint } from '@/data/analytics';
+import type { TrendDataResponse } from '@/types';
 
 interface EngagementChartProps {
-    data: TrendDataPoint[];
+    data: TrendDataResponse[];
 }
 
 export function EngagementChart({ data }: EngagementChartProps) {
-    // Calculate max values for scaling
-    const maxReach = Math.max(...data.map(d => d.reach));
-    const maxEngagement = Math.max(...data.map(d => d.engagement));
-
     const formatDate = (dateStr: string): string => {
         const date = new Date(dateStr);
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -18,6 +14,25 @@ export function EngagementChart({ data }: EngagementChartProps) {
         if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
         return num.toString();
     };
+
+    // Handle empty data
+    if (!data || data.length === 0) {
+        return (
+            <div className="card bg-base-100 shadow-lg">
+                <div className="card-body text-center py-12">
+                    <i className="fa-solid fa-duotone fa-chart-line text-6xl opacity-20 mb-4"></i>
+                    <h3 className="font-bold text-xl mb-2">No Trend Data Yet</h3>
+                    <p className="opacity-70">
+                        Publish posts and collect analytics to see engagement trends over time
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    // Calculate max values for scaling
+    const maxReach = Math.max(...data.map(d => d.reach), 1);
+    const maxEngagement = Math.max(...data.map(d => d.engagement), 1);
 
     return (
         <div className="card bg-base-100 shadow-lg">

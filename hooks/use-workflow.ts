@@ -6,38 +6,75 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type {
-    ApprovalWorkflow,
     WorkflowComment,
     WorkflowActivity,
     WorkflowStats,
     WorkflowStatus,
 } from '@/types/workflow';
-import {
-    mockWorkflows,
-    mockWorkflowStats,
-    getWorkflowActivities,
-} from '@/data/workflow';
+import type { ApprovalWorkflow } from '@/types/index';
+import { getWorkflowActivities } from '@/data/workflow';
 import { apiClient } from '@/lib/api-client';
+import { useOrganization } from '@/contexts/organization-context';
+import { useContextParams } from './use-context-params';
 
 export function useWorkflow() {
+    const { organizationId } = useOrganization();
+    const { companyId, productId } = useContextParams();
     const [workflows, setWorkflows] = useState<ApprovalWorkflow[]>([]);
-    const [stats, setStats] = useState<WorkflowStats>(mockWorkflowStats);
+    const [stats, setStats] = useState<WorkflowStats>({
+        pending: 0,
+        approved: 0,
+        rejected: 0,
+        changesRequested: 0,
+        avgReviewTime: 0,
+        overdueCount: 0,
+    });
     const [isLoading, setIsLoading] = useState(true);
     const [selectedWorkflow, setSelectedWorkflow] = useState<ApprovalWorkflow | null>(null);
 
     // Load workflows
     useEffect(() => {
         const loadWorkflows = async () => {
+            if (!organizationId) {
+                setWorkflows([]);
+                setIsLoading(false);
+                return;
+            }
+
             setIsLoading(true);
-            // Simulate API call
-            await new Promise((resolve) => setTimeout(resolve, 500));
-            setWorkflows(mockWorkflows);
-            setStats(mockWorkflowStats);
-            setIsLoading(false);
+            try {
+                // Try to fetch from API (Note: workflow API would need context params added)
+                const data = await apiClient.workflow.getWorkflows(organizationId);
+                setWorkflows(data);
+
+                // Calculate stats from real data
+                const calculatedStats: WorkflowStats = {
+                    pending: data.filter(w => w.status === 'pending').length,
+                    approved: data.filter(w => w.status === 'approved').length,
+                    rejected: data.filter(w => w.status === 'rejected').length,
+                    changesRequested: data.filter(w => w.status === 'changes_requested').length,
+                    avgReviewTime: 0, // TODO: Calculate from reviewedAt - submittedAt
+                    overdueCount: 0, // TODO: Calculate based on due dates
+                };
+                setStats(calculatedStats);
+            } catch (error) {
+                console.error('Failed to load workflows from API:', error);
+                setWorkflows([]);
+                setStats({
+                    pending: 0,
+                    approved: 0,
+                    rejected: 0,
+                    changesRequested: 0,
+                    avgReviewTime: 0,
+                    overdueCount: 0,
+                });
+            } finally {
+                setIsLoading(false);
+            }
         };
 
         loadWorkflows();
-    }, []);
+    }, [organizationId, companyId, productId]);
 
     // Get workflows by status
     const getByStatus = useCallback((status: WorkflowStatus | 'all') => {
@@ -50,7 +87,7 @@ export function useWorkflow() {
     // Get workflow comments (fetches comments for the post associated with the workflow)
     const getComments = useCallback(async (workflowId: string): Promise<WorkflowComment[]> => {
         const workflow = workflows.find(wf => wf.id === workflowId);
-        if (!workflow) return [];
+        if (!workflow || !workflow.post) return [];
 
         try {
             const { comments } = await apiClient.comments.getAll(workflow.postId, {
@@ -67,7 +104,7 @@ export function useWorkflow() {
                     name: comment.user_email.split('@')[0], // Extract name from email
                     email: comment.user_email,
                     role: 'editor', // Default role, would need to fetch from team members API
-                    organizationId: workflow.post.organizationId,
+                    organizationId: workflow.organizationId,
                     joinedAt: new Date(),
                 },
                 content: comment.comment,
@@ -87,77 +124,111 @@ export function useWorkflow() {
     }, []);
 
     // Approve workflow
-    const approve = useCallback((workflowId: string, comment?: string) => {
-        setWorkflows((prev) =>
-            prev.map((wf) =>
-                wf.id === workflowId
-                    ? {
-                        ...wf,
-                        status: 'approved' as WorkflowStatus,
-                        reviewedAt: new Date(),
-                    }
-                    : wf
-            )
-        );
+    const approve = useCallback(async (workflowId: string, comment?: string): Promise<boolean> => {
+        const workflow = workflows.find(w => w.id === workflowId);
+        if (!workflow) return false;
 
-        // Update stats
-        setStats((prev) => ({
-            ...prev,
-            pending: prev.pending - 1,
-            approved: prev.approved + 1,
-        }));
+        try {
+            await apiClient.workflow.approvePost(workflow.postId, comment);
 
-        // In real app, this would call API
-        console.log('Approved workflow:', workflowId, comment);
-    }, []);
+            // Update local state
+            setWorkflows((prev) =>
+                prev.map((wf) =>
+                    wf.id === workflowId
+                        ? {
+                            ...wf,
+                            status: 'approved' as const,
+                            reviewedAt: new Date(),
+                        }
+                        : wf
+                )
+            );
+
+            // Update stats
+            setStats((prev) => ({
+                ...prev,
+                pending: Math.max(0, prev.pending - 1),
+                approved: prev.approved + 1,
+            }));
+
+            return true;
+        } catch (error) {
+            console.error('Failed to approve workflow:', error);
+            return false;
+        }
+    }, [workflows]);
 
     // Reject workflow
-    const reject = useCallback((workflowId: string, reason: string) => {
-        setWorkflows((prev) =>
-            prev.map((wf) =>
-                wf.id === workflowId
-                    ? {
-                        ...wf,
-                        status: 'rejected' as WorkflowStatus,
-                        reviewedAt: new Date(),
-                    }
-                    : wf
-            )
-        );
+    const reject = useCallback(async (workflowId: string, reason: string): Promise<boolean> => {
+        const workflow = workflows.find(w => w.id === workflowId);
+        if (!workflow) return false;
 
-        // Update stats
-        setStats((prev) => ({
-            ...prev,
-            pending: prev.pending - 1,
-            rejected: prev.rejected + 1,
-        }));
+        try {
+            await apiClient.workflow.rejectPost(workflow.postId, reason);
 
-        console.log('Rejected workflow:', workflowId, reason);
-    }, []);
+            // Update local state
+            setWorkflows((prev) =>
+                prev.map((wf) =>
+                    wf.id === workflowId
+                        ? {
+                            ...wf,
+                            status: 'rejected' as const,
+                            reviewedAt: new Date(),
+                        }
+                        : wf
+                )
+            );
+
+            // Update stats
+            setStats((prev) => ({
+                ...prev,
+                pending: Math.max(0, prev.pending - 1),
+                rejected: prev.rejected + 1,
+            }));
+
+            return true;
+        } catch (error) {
+            console.error('Failed to reject workflow:', error);
+            return false;
+        }
+    }, [workflows]);
 
     // Request changes
-    const requestChanges = useCallback((workflowId: string, feedback: string) => {
-        setWorkflows((prev) =>
-            prev.map((wf) =>
-                wf.id === workflowId
-                    ? {
-                        ...wf,
-                        status: 'changes_requested' as WorkflowStatus,
-                        reviewedAt: new Date(),
-                    }
-                    : wf
-            )
-        );
+    const requestChanges = useCallback(async (workflowId: string, feedback: string): Promise<boolean> => {
+        // Note: The workflow API doesn't have a specific "request changes" endpoint
+        // We'll reject with feedback for now. This should be enhanced in the backend.
+        const workflow = workflows.find(w => w.id === workflowId);
+        if (!workflow) return false;
 
-        // Update stats
-        setStats((prev) => ({
-            ...prev,
-            pending: prev.pending - 1,
-            changesRequested: prev.changesRequested + 1,
-        }));
+        try {
+            await apiClient.workflow.rejectPost(workflow.postId, feedback);
 
-        console.log('Requested changes:', workflowId, feedback);
-    }, []);
+            // Update local state
+            setWorkflows((prev) =>
+                prev.map((wf) =>
+                    wf.id === workflowId
+                        ? {
+                            ...wf,
+                            status: 'changes_requested' as const,
+                            reviewedAt: new Date(),
+                        }
+                        : wf
+                )
+            );
+
+            // Update stats
+            setStats((prev) => ({
+                ...prev,
+                pending: Math.max(0, prev.pending - 1),
+                changesRequested: prev.changesRequested + 1,
+            }));
+
+            return true;
+        } catch (error) {
+            console.error('Failed to request changes:', error);
+            return false;
+        }
+    }, [workflows]);
 
     // Add comment
     const addComment = useCallback(async (workflowId: string, content: string): Promise<boolean> => {

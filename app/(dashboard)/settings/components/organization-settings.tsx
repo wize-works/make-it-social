@@ -1,21 +1,64 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useOrganization, useAuth } from '@clerk/nextjs';
+import { useToast } from '@/contexts/toast-context';
 
 export function OrganizationSettings() {
     const [isEditing, setIsEditing] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const { organization: clerkOrg, isLoaded } = useOrganization();
+    const { getToken } = useAuth();
+    const { showToast } = useToast();
 
-    // Mock organization data
-    const [organization, setOrganization] = useState({
-        name: 'Acme Corporation',
-        slug: 'acme-corp',
-        website: 'https://acme.com',
+    // All organization fields (editable)
+    const [orgData, setOrgData] = useState({
+        name: '',
+        slug: '',
+        imageUrl: '',
+        website: '',
         industry: 'Technology',
         size: '11-50',
-        description: 'Leading provider of innovative software solutions.',
-        logo: '',
+        description: '',
     });
+
+    // Load organization data (from Clerk UI state and database)
+    useEffect(() => {
+        const loadOrgData = async () => {
+            if (!clerkOrg?.id) return;
+
+            try {
+                const token = await getToken({ template: 'make-it-social-api' });
+                const url = `${process.env.NEXT_PUBLIC_AUTH_API_URL}/api/v1/organizations/${clerkOrg.id}`;
+
+                const response = await fetch(url, {
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    // Merge Clerk UI state with database data
+                    setOrgData({
+                        name: clerkOrg.name,
+                        slug: clerkOrg.slug || '',
+                        imageUrl: clerkOrg.imageUrl || '',
+                        website: data.data.website || '',
+                        industry: data.data.industry || 'Technology',
+                        size: data.data.size || '11-50',
+                        description: data.data.description || '',
+                    });
+                }
+            } catch (error) {
+                console.error('Failed to load organization data:', error);
+            }
+        };
+
+        if (isLoaded && clerkOrg) {
+            loadOrgData();
+        }
+    }, [clerkOrg, isLoaded, getToken]);
 
     const industries = [
         'Technology',
@@ -33,12 +76,58 @@ export function OrganizationSettings() {
     const companySizes = ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+'];
 
     const handleSave = async () => {
+        if (!clerkOrg?.id) return;
+
         setIsSaving(true);
-        // TODO: Save to database
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-        setIsSaving(false);
-        setIsEditing(false);
+        try {
+            const token = await getToken({ template: 'make-it-social-api' });
+
+            // Update organization via auth-api (handles both Clerk and database)
+            const response = await fetch(
+                `${process.env.NEXT_PUBLIC_AUTH_API_URL || 'http://localhost:3002'}/api/v1/organizations/${clerkOrg.id}`,
+                {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        name: orgData.name,
+                        slug: orgData.slug,
+                        imageUrl: orgData.imageUrl,
+                        website: orgData.website,
+                        industry: orgData.industry,
+                        size: orgData.size,
+                        description: orgData.description,
+                    }),
+                }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || 'Failed to update organization');
+            }
+
+            showToast('Organization updated successfully', 'success');
+            setIsEditing(false);
+
+            // Refresh the page to update Clerk org context
+            window.location.reload();
+        } catch (error) {
+            console.error('Failed to save organization:', error);
+            showToast(error instanceof Error ? error.message : 'Failed to update organization', 'error');
+        } finally {
+            setIsSaving(false);
+        }
     };
+
+    if (!isLoaded || !clerkOrg) {
+        return (
+            <div className="flex items-center justify-center py-12">
+                <span className="loading loading-spinner loading-lg"></span>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -90,27 +179,36 @@ export function OrganizationSettings() {
             {/* Organization Logo */}
             <div className="flex items-start gap-6">
                 <div className="shrink-0">
-                    <div className="w-24 h-24 rounded-lg bg-linear-to-br from-primary to-secondary flex items-center justify-center text-primary-content text-3xl font-bold">
-                        {organization.name.charAt(0)}
-                    </div>
+                    {orgData.imageUrl ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                            src={orgData.imageUrl}
+                            alt={orgData.name}
+                            className="w-24 h-24 rounded-lg object-cover"
+                        />
+                    ) : (
+                        <div className="w-24 h-24 rounded-lg bg-linear-to-br from-primary to-secondary flex items-center justify-center text-primary-content text-3xl font-bold">
+                            {orgData.name.charAt(0) || 'O'}
+                        </div>
+                    )}
                 </div>
                 <div className="flex-1">
                     <h3 className="font-semibold mb-2">Organization Logo</h3>
-                    <p className="text-sm text-base-content/60 mb-4">
-                        Upload your organization logo (recommended 400x400px)
+                    <p className="text-sm text-base-content/60 mb-2">
+                        Upload a new logo or provide a URL
                     </p>
-                    <div className="flex gap-2">
-                        <button className="btn btn-sm btn-outline" disabled={!isEditing}>
-                            <i className="fa-solid fa-duotone fa-upload"></i>
-                            Upload Logo
-                        </button>
-                        {organization.logo && (
-                            <button className="btn btn-sm btn-ghost btn-error" disabled={!isEditing}>
-                                <i className="fa-solid fa-duotone fa-trash"></i>
-                                Remove
-                            </button>
-                        )}
-                    </div>
+                    {isEditing && (
+                        <div className="space-y-2">
+                            <input
+                                type="url"
+                                className="input input-bordered input-sm w-full"
+                                value={orgData.imageUrl}
+                                onChange={(e) => setOrgData({ ...orgData, imageUrl: e.target.value })}
+                                placeholder="https://example.com/logo.png"
+                            />
+                            <p className="text-xs opacity-60">Or upload a file (coming soon)</p>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -125,11 +223,10 @@ export function OrganizationSettings() {
                         <input
                             type="text"
                             className="input"
-                            value={organization.name}
-                            onChange={(e) =>
-                                setOrganization({ ...organization, name: e.target.value })
-                            }
+                            value={orgData.name}
+                            onChange={(e) => setOrgData({ ...orgData, name: e.target.value })}
                             disabled={!isEditing}
+                            placeholder="My Company"
                         />
                     </fieldset>
 
@@ -142,15 +239,14 @@ export function OrganizationSettings() {
                             <input
                                 type="text"
                                 className="input input-bordered join-item flex-1"
-                                value={organization.slug}
-                                onChange={(e) =>
-                                    setOrganization({ ...organization, slug: e.target.value })
-                                }
+                                value={orgData.slug}
+                                onChange={(e) => setOrgData({ ...orgData, slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
                                 disabled={!isEditing}
+                                placeholder="my-company"
                             />
                         </div>
-                        <p className="label">
-                            Used for workspace URL and team invites
+                        <p className="label text-xs opacity-70">
+                            Lowercase letters, numbers, and hyphens only
                         </p>
                     </fieldset>
 
@@ -159,9 +255,9 @@ export function OrganizationSettings() {
                         <input
                             type="url"
                             className="input"
-                            value={organization.website}
+                            value={orgData.website}
                             onChange={(e) =>
-                                setOrganization({ ...organization, website: e.target.value })
+                                setOrgData({ ...orgData, website: e.target.value })
                             }
                             disabled={!isEditing}
                             placeholder="https://example.com"
@@ -172,9 +268,9 @@ export function OrganizationSettings() {
                         <legend className="fieldset-legend">Industry</legend>
                         <select
                             className="select select-bordered w-full"
-                            value={organization.industry}
+                            value={orgData.industry}
                             onChange={(e) =>
-                                setOrganization({ ...organization, industry: e.target.value })
+                                setOrgData({ ...orgData, industry: e.target.value })
                             }
                             disabled={!isEditing}
                         >
@@ -190,9 +286,9 @@ export function OrganizationSettings() {
                         <legend className="fieldset-legend">Company Size</legend>
                         <select
                             className="select select-bordered w-full"
-                            value={organization.size}
+                            value={orgData.size}
                             onChange={(e) =>
-                                setOrganization({ ...organization, size: e.target.value })
+                                setOrgData({ ...orgData, size: e.target.value })
                             }
                             disabled={!isEditing}
                         >
@@ -208,9 +304,9 @@ export function OrganizationSettings() {
                         <legend className="fieldset-legend">Description</legend>
                         <textarea
                             className="textarea textarea-bordered h-24 w-full"
-                            value={organization.description}
+                            value={orgData.description}
                             onChange={(e) =>
-                                setOrganization({ ...organization, description: e.target.value })
+                                setOrgData({ ...orgData, description: e.target.value })
                             }
                             disabled={!isEditing}
                         />

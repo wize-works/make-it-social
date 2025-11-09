@@ -159,7 +159,7 @@ export const ALL_PLATFORMS: PlatformConfig[] = Object.values(PLATFORM_CONFIG);
  * Get platform icon class name
  */
 export function getPlatformIcon(platform: SocialPlatform): string {
-    return PLATFORM_ICONS[platform] || 'fa-solid fa-mobile';
+    return PLATFORM_ICONS[platform] || 'fa-solid fa-duotone fa-mobile';
 }
 
 /**
@@ -190,7 +190,7 @@ export function getPlatformConfig(platform: SocialPlatform): PlatformConfig {
     return PLATFORM_CONFIG[platform] || {
         id: platform,
         name: platform,
-        icon: 'fa-solid fa-mobile',
+        icon: 'fa-solid fa-duotone fa-mobile',
         color: 'text-base-content',
         bgColor: 'bg-base-300',
     };

@@ -80,7 +80,7 @@ export function Sidebar() {
                 </div>
 
                 {/* Navigation */}
-                <nav className="flex-1 overflow-y-auto p-4">
+                <nav className="flex-1 p-4">
                     {navigationSections.map((section, sectionIndex) => (
                         <div key={sectionIndex} className="mb-4">
                             {section.title && !isCollapsed && (

@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Post, SocialPlatform } from '@/types';
 import { apiClient } from '@/lib/api-client';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useOrganization } from '@/contexts/organization-context';
+import { useContextParams } from './use-context-params';
 
 interface CalendarFilters {
     platforms: SocialPlatform[];
@@ -10,6 +11,7 @@ interface CalendarFilters {
 
 export function useCalendar() {
     const { organizationId } = useOrganization();
+    const { companyId, productId } = useContextParams();
     const [posts, setPosts] = useState<Post[]>([]);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [filters, setFilters] = useState<CalendarFilters>({
@@ -28,7 +30,10 @@ export function useCalendar() {
 
             try {
                 setIsLoading(true);
-                const { posts: fetchedPosts } = await apiClient.posts.getAll(organizationId);
+                const { posts: fetchedPosts } = await apiClient.posts.getAll(organizationId, {
+                    companyId,
+                    productId,
+                });
                 setPosts(fetchedPosts);
             } catch (error) {
                 console.error('Failed to load posts:', error);
@@ -39,7 +44,7 @@ export function useCalendar() {
         };
 
         loadPosts();
-    }, [organizationId]);
+    }, [organizationId, companyId, productId]);
 
     // Filter posts based on selected filters
     const filteredPosts = useMemo(() => {

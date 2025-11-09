@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { apiClient } from '@/lib/api-client';
+// import { useContextParams } from './useContextParams'; // TODO: Uncomment when campaigns API supports context
 
 // Campaign type definition (to be added to types/index.ts later)
 interface Campaign {
@@ -22,6 +23,8 @@ interface Campaign {
 }
 
 export function useCampaigns(organizationId: string) {
+    // TODO: Add context support when campaigns API implements companyId/productId filtering
+    // const { companyId, productId } = useContextParams();
     const [campaigns, setCampaigns] = useState<Campaign[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
@@ -33,6 +36,7 @@ export function useCampaigns(organizationId: string) {
             setIsLoading(true);
             setError(null);
 
+            // TODO: Pass companyId, productId when API supports them
             const data = await apiClient.campaigns.getAll(organizationId);
             setCampaigns(data);
         } catch (err) {

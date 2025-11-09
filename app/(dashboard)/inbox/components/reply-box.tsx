@@ -69,12 +69,12 @@ export function ReplyBox({ onSend, onCancel, platform, maxLength }: ReplyBoxProp
 
                     {/* Emoji picker placeholder */}
                     <button className="btn btn-sm btn-ghost" title="Add emoji">
-                        <i className="fa-solid fa-face-smile"></i>
+                        <i className="fa-solid fa-duotone fa-face-smile"></i>
                     </button>
 
                     {/* Media attachment placeholder */}
                     <button className="btn btn-sm btn-ghost" title="Attach media">
-                        <i className="fa-solid fa-paperclip"></i>
+                        <i className="fa-solid fa-duotone fa-paperclip"></i>
                     </button>
                 </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useToast, type ToastType } from '@/contexts/ToastContext';
+import { useToast, type ToastType } from '@/contexts/toast-context';
 
 const TOAST_STYLES: Record<ToastType, string> = {
     success: 'alert-success',

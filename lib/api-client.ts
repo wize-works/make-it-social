@@ -9,14 +9,23 @@ import type {
     Post,
     BrandProfile,
     AnalyticsMetrics,
+    OverviewMetricsResponse,
+    EngagementBreakdownResponse,
+    ComparisonMetricsResponse,
+    AggregatedMetricsResponse,
+    AccountMetricsResponse,
     Campaign,
     ContentTemplate,
     MediaLibraryItem,
     Notification,
-    AnalyticsInsight,
-    OptimalPostingTime,
     ApprovalWorkflow,
-} from '@/types';// API Base URLs
+    Comment as ExternalComment,
+    CommentReply as ExternalCommentReply,
+} from '@/types';
+
+// Import enhanced company/product types from specific files
+import type { Company } from '@/types/company';
+import type { Product } from '@/types/product';// API Base URLs
 const API_BASE_URLS = {
     auth: process.env.NEXT_PUBLIC_AUTH_API_URL || 'http://localhost:3002',
     socialAccounts: process.env.NEXT_PUBLIC_SOCIAL_ACCOUNTS_API_URL || 'http://localhost:3003',
@@ -25,6 +34,7 @@ const API_BASE_URLS = {
     analytics: process.env.NEXT_PUBLIC_ANALYTICS_API_URL || 'http://localhost:3006',
     workflow: process.env.NEXT_PUBLIC_WORKFLOW_API_URL || 'http://localhost:3007',
     ai: process.env.NEXT_PUBLIC_AI_API_URL || 'http://localhost:3008',
+    engagement: process.env.NEXT_PUBLIC_ENGAGEMENT_API_URL || 'http://localhost:3009',
 };
 
 // API Response wrapper
@@ -78,6 +88,12 @@ class HttpClient {
 
             if (!response.ok) {
                 const error: ApiError = await response.json();
+
+                // Log validation errors for debugging
+                if (error.error.details) {
+                    console.error('Validation errors:', error.error.details);
+                }
+
                 throw new Error(error.error.message || 'API request failed');
             }
 
@@ -126,6 +142,13 @@ const httpClient = new HttpClient();
 // Organizations API (Auth API)
 // ============================================================================
 export const organizationsApi = {
+    async getAll(): Promise<Organization[]> {
+        const response = await httpClient.get<ApiResponse<Organization[]>>(
+            `${API_BASE_URLS.auth}/api/v1/organizations`
+        );
+        return response.data;
+    },
+
     async getById(id: string): Promise<Organization> {
         const response = await httpClient.get<ApiResponse<Organization>>(
             `${API_BASE_URLS.auth}/api/v1/organizations/${id}`
@@ -142,12 +165,379 @@ export const organizationsApi = {
 };
 
 // ============================================================================
+// Companies API (Auth API)
+// ============================================================================
+
+// Define API response types (snake_case from database)
+interface APICompany {
+    id: string;
+    organization_id: string;
+    name: string;
+    slug: string;
+    logo_url?: string;
+    icon_url?: string;
+    website?: string;
+    industry?: string;
+    description?: string;
+    brand_voice?: string;
+    target_audience?: string;
+    content_guidelines?: string;
+    restricted_topics?: string[];
+    preferred_hashtags?: string[];
+    brand_colors?: Array<{
+        id: string;
+        value: string;
+    }>;
+    is_active: boolean;
+    created_by: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export const companiesApi = {
+    async getAll(organizationId: string): Promise<Company[]> {
+        const response = await httpClient.get<ApiResponse<APICompany[]>>(
+            `${API_BASE_URLS.auth}/api/v1/companies?organizationId=${organizationId}`
+        );
+        // Transform snake_case API response to camelCase for UI
+        return response.data.map((company: APICompany) => ({
+            id: company.id,
+            organizationId: company.organization_id,
+            name: company.name,
+            slug: company.slug,
+            logo: company.logo_url,
+            logoUrl: company.logo_url,
+            icon: company.icon_url,
+            iconUrl: company.icon_url,
+            website: company.website,
+            industry: company.industry,
+            description: company.description,
+            brandVoice: company.brand_voice,
+            brandColors: company.brand_colors,
+            targetAudience: company.target_audience,
+            contentGuidelines: company.content_guidelines,
+            restrictedTopics: company.restricted_topics,
+            preferredHashtags: company.preferred_hashtags,
+            isActive: company.is_active,
+            createdBy: company.created_by,
+            createdAt: new Date(company.created_at),
+            updatedAt: new Date(company.updated_at),
+        }));
+    },
+
+    async getById(id: string): Promise<Company> {
+        const response = await httpClient.get<ApiResponse<APICompany>>(
+            `${API_BASE_URLS.auth}/api/v1/companies/${id}`
+        );
+        const company = response.data;
+        return {
+            id: company.id,
+            organizationId: company.organization_id,
+            name: company.name,
+            slug: company.slug,
+            logo: company.logo_url,
+            logoUrl: company.logo_url,
+            icon: company.icon_url,
+            iconUrl: company.icon_url,
+            website: company.website,
+            industry: company.industry,
+            description: company.description,
+            brandVoice: company.brand_voice,
+            brandColors: company.brand_colors,
+            targetAudience: company.target_audience,
+            contentGuidelines: company.content_guidelines,
+            restrictedTopics: company.restricted_topics,
+            preferredHashtags: company.preferred_hashtags,
+            isActive: company.is_active,
+            createdBy: company.created_by,
+            createdAt: new Date(company.created_at),
+            updatedAt: new Date(company.updated_at),
+        };
+    },
+
+    async create(data: Partial<Company>): Promise<Company> {
+        const response = await httpClient.post<ApiResponse<APICompany>>(
+            `${API_BASE_URLS.auth}/api/v1/companies`,
+            {
+                organization_id: data.organizationId,
+                name: data.name,
+                slug: data.slug,
+                logo_url: data.logoUrl,
+                website: data.website,
+                industry: data.industry,
+                description: data.description,
+                brand_voice: data.brandVoice,
+                target_audience: data.targetAudience,
+                content_guidelines: data.contentGuidelines,
+                restricted_topics: data.restrictedTopics,
+                visual_identity: data.visualIdentity,
+            }
+        );
+        const company = response.data;
+        return {
+            id: company.id,
+            organizationId: company.organization_id,
+            name: company.name,
+            slug: company.slug,
+            logo: company.logo_url,
+            logoUrl: company.logo_url,
+            icon: company.icon_url,
+            iconUrl: company.icon_url,
+            website: company.website,
+            industry: company.industry,
+            description: company.description,
+            brandVoice: company.brand_voice,
+            brandColors: company.brand_colors,
+            targetAudience: company.target_audience,
+            contentGuidelines: company.content_guidelines,
+            restrictedTopics: company.restricted_topics,
+            preferredHashtags: company.preferred_hashtags,
+            isActive: company.is_active,
+            createdBy: company.created_by,
+            createdAt: new Date(company.created_at),
+            updatedAt: new Date(company.updated_at),
+        };
+    },
+
+    async update(id: string, data: Partial<Company>): Promise<Company> {
+        const requestBody: Record<string, unknown> = {
+            name: data.name,
+            slug: data.slug,
+            // Map logo from both logo and logoUrl fields (edit modal uses logo, API returns logoUrl)
+            logo_url: (data as unknown as { logoUrl?: string; logo?: string }).logoUrl || (data as unknown as { logoUrl?: string; logo?: string }).logo,
+            // Map icon from both icon and iconUrl fields
+            icon_url: (data as unknown as { iconUrl?: string; icon?: string }).iconUrl || (data as unknown as { iconUrl?: string; icon?: string }).icon,
+            website: data.website,
+            industry: data.industry,
+            description: data.description,
+            brand_voice: data.brandVoice,
+            target_audience: data.targetAudience,
+            content_guidelines: data.contentGuidelines,
+            restricted_topics: data.restrictedTopics,
+            // Map UI brandColors and preferredHashtags to snake_case for API
+            brand_colors: (data as unknown as { brandColors?: unknown }).brandColors,
+            preferred_hashtags: (data as unknown as { preferredHashtags?: string[] }).preferredHashtags,
+            is_active: data.isActive,
+        };
+
+        // Remove null and undefined values (Zod expects undefined, not null)
+        Object.keys(requestBody).forEach(key => {
+            if (requestBody[key] === null || requestBody[key] === undefined) {
+                delete requestBody[key];
+            }
+        });
+
+        console.log('Updating company with data:', requestBody);
+
+        const response = await httpClient.patch<ApiResponse<APICompany>>(
+            `${API_BASE_URLS.auth}/api/v1/companies/${id}`,
+            requestBody
+        );
+        const company = response.data;
+        return {
+            id: company.id,
+            organizationId: company.organization_id,
+            name: company.name,
+            slug: company.slug,
+            logo: company.logo_url,
+            logoUrl: company.logo_url,
+            icon: company.icon_url,
+            iconUrl: company.icon_url,
+            website: company.website,
+            industry: company.industry,
+            description: company.description,
+            brandVoice: company.brand_voice,
+            brandColors: company.brand_colors,
+            targetAudience: company.target_audience,
+            contentGuidelines: company.content_guidelines,
+            restrictedTopics: company.restricted_topics,
+            preferredHashtags: company.preferred_hashtags,
+            isActive: company.is_active,
+            createdBy: company.created_by,
+            createdAt: new Date(company.created_at),
+            updatedAt: new Date(company.updated_at),
+        };
+    },
+
+    async delete(id: string): Promise<void> {
+        await httpClient.delete(`${API_BASE_URLS.auth}/api/v1/companies/${id}`);
+    },
+};
+
+// ============================================================================
+// Products API (Auth API)
+// ============================================================================
+
+// Define API response type for products (snake_case from database)
+interface APIProduct {
+    id: string;
+    organization_id: string;
+    company_id: string;
+    name: string;
+    slug: string;
+    image_url?: string;
+    description?: string;
+    sku?: string;
+    category?: string;
+    tags?: string[];
+    price?: number;
+    currency?: string;
+    is_active: boolean;
+    created_by: string;
+    created_at: string;
+    updated_at: string;
+}
+
+export const productsApi = {
+    async getAll(params: { companyId?: string; organizationId: string }): Promise<Product[]> {
+        const queryParams = new URLSearchParams({ organizationId: params.organizationId });
+        if (params.companyId) queryParams.append('companyId', params.companyId);
+
+        const response = await httpClient.get<ApiResponse<APIProduct[]>>(
+            `${API_BASE_URLS.auth}/api/v1/products?${queryParams}`
+        );
+        // Transform snake_case API response to camelCase for UI
+        return response.data.map((product: APIProduct) => ({
+            id: product.id,
+            organizationId: product.organization_id,
+            companyId: product.company_id,
+            name: product.name,
+            slug: product.slug,
+            imageUrl: product.image_url,
+            description: product.description,
+            sku: product.sku,
+            category: product.category,
+            tags: product.tags,
+            price: product.price,
+            currency: product.currency,
+            isActive: product.is_active,
+            createdBy: product.created_by,
+            createdAt: new Date(product.created_at),
+            updatedAt: new Date(product.updated_at),
+        }));
+    },
+
+    async getById(id: string): Promise<Product> {
+        const response = await httpClient.get<ApiResponse<APIProduct>>(
+            `${API_BASE_URLS.auth}/api/v1/products/${id}`
+        );
+        const product = response.data;
+        return {
+            id: product.id,
+            organizationId: product.organization_id,
+            companyId: product.company_id,
+            name: product.name,
+            slug: product.slug,
+            imageUrl: product.image_url,
+            description: product.description,
+            sku: product.sku,
+            category: product.category,
+            tags: product.tags,
+            price: product.price,
+            currency: product.currency,
+            isActive: product.is_active,
+            createdBy: product.created_by,
+            createdAt: new Date(product.created_at),
+            updatedAt: new Date(product.updated_at),
+        };
+    },
+
+    async create(data: Partial<Product>): Promise<Product> {
+        const response = await httpClient.post<ApiResponse<APIProduct>>(
+            `${API_BASE_URLS.auth}/api/v1/products`,
+            {
+                company_id: data.companyId,
+                name: data.name,
+                slug: data.slug,
+                image_url: data.imageUrl,
+                description: data.description,
+                sku: data.sku,
+                category: data.category,
+                tags: data.tags,
+                price: data.price,
+                currency: data.currency,
+            }
+        );
+        const product = response.data;
+        return {
+            id: product.id,
+            organizationId: product.organization_id,
+            companyId: product.company_id,
+            name: product.name,
+            slug: product.slug,
+            imageUrl: product.image_url,
+            description: product.description,
+            sku: product.sku,
+            category: product.category,
+            tags: product.tags,
+            price: product.price,
+            currency: product.currency,
+            isActive: product.is_active,
+            createdBy: product.created_by,
+            createdAt: new Date(product.created_at),
+            updatedAt: new Date(product.updated_at),
+        };
+    },
+
+    async update(id: string, data: Partial<Product>): Promise<Product> {
+        const response = await httpClient.patch<ApiResponse<APIProduct>>(
+            `${API_BASE_URLS.auth}/api/v1/products/${id}`,
+            {
+                name: data.name,
+                slug: data.slug,
+                image_url: data.imageUrl,
+                description: data.description,
+                sku: data.sku,
+                category: data.category,
+                tags: data.tags,
+                price: data.price,
+                currency: data.currency,
+                is_active: data.isActive,
+            }
+        );
+        const product = response.data;
+        return {
+            id: product.id,
+            organizationId: product.organization_id,
+            companyId: product.company_id,
+            name: product.name,
+            slug: product.slug,
+            imageUrl: product.image_url,
+            description: product.description,
+            sku: product.sku,
+            category: product.category,
+            tags: product.tags,
+            price: product.price,
+            currency: product.currency,
+            isActive: product.is_active,
+            createdBy: product.created_by,
+            createdAt: new Date(product.created_at),
+            updatedAt: new Date(product.updated_at),
+        };
+    },
+
+    async delete(id: string): Promise<void> {
+        await httpClient.delete(`${API_BASE_URLS.auth}/api/v1/products/${id}`);
+    },
+};
+
+// ============================================================================
 // Social Accounts API
 // ============================================================================
 export const socialAccountsApi = {
-    async getAll(organizationId: string): Promise<SocialAccount[]> {
+    async getAll(
+        organizationId: string,
+        params?: {
+            companyId?: string;
+            productId?: string;
+        }
+    ): Promise<SocialAccount[]> {
+        const queryParams = new URLSearchParams({ organizationId });
+        if (params?.companyId) queryParams.append('companyId', params.companyId);
+        if (params?.productId) queryParams.append('productId', params.productId);
+
         const response = await httpClient.get<ApiResponse<SocialAccount[]>>(
-            `${API_BASE_URLS.socialAccounts}/api/v1/social-accounts?organizationId=${organizationId}`
+            `${API_BASE_URLS.socialAccounts}/api/v1/social-accounts?${queryParams}`
         );
         return response.data;
     },
@@ -215,6 +605,8 @@ export const postsApi = {
             status?: string;
             page?: number;
             perPage?: number;
+            companyId?: string;
+            productId?: string;
         }
     ): Promise<{
         posts: Post[];
@@ -230,6 +622,8 @@ export const postsApi = {
             ...(params?.status && { status: params.status }),
             ...(params?.page && { page: params.page.toString() }),
             ...(params?.perPage && { perPage: params.perPage.toString() }),
+            ...(params?.companyId && { companyId: params.companyId }),
+            ...(params?.productId && { productId: params.productId }),
         });
 
         const response = await httpClient.get<ApiResponse<Post[]>>(
@@ -468,71 +862,132 @@ export const mediaApi = {
 // Analytics API
 // ============================================================================
 export const analyticsApi = {
-    async getPostMetrics(postId: string): Promise<AnalyticsMetrics[]> {
-        const response = await httpClient.get<ApiResponse<AnalyticsMetrics[]>>(
-            `${API_BASE_URLS.analytics}/api/v1/metrics/posts/${postId}`
-        );
-        return response.data;
-    },
-
-    async getAccountMetrics(
-        accountId: string,
-        startDate?: string,
-        endDate?: string
-    ): Promise<AnalyticsMetrics[]> {
-        const params = new URLSearchParams();
-        if (startDate) params.append('startDate', startDate);
-        if (endDate) params.append('endDate', endDate);
-
-        const response = await httpClient.get<ApiResponse<AnalyticsMetrics[]>>(
-            `${API_BASE_URLS.analytics}/api/v1/metrics/accounts/${accountId}?${params}`
-        );
-        return response.data;
-    },
-
-    async getInsights(organizationId: string): Promise<AnalyticsInsight[]> {
-        const response = await httpClient.get<ApiResponse<AnalyticsInsight[]>>(
-            `${API_BASE_URLS.analytics}/api/v1/insights?organizationId=${organizationId}`
-        );
-        return response.data;
-    },
-
-    async getOptimalTimes(
-        organizationId: string,
-        accountId?: string
-    ): Promise<OptimalPostingTime[]> {
-        const params = new URLSearchParams({ organizationId });
-        if (accountId) params.append('accountId', accountId);
-
-        const response = await httpClient.get<ApiResponse<OptimalPostingTime[]>>(
-            `${API_BASE_URLS.analytics}/api/v1/optimal-times?${params}`
-        );
-        return response.data;
-    },
-
+    /**
+     * Get overview metrics for dashboard
+     */
     async getOverview(
         organizationId: string,
+        period: 'day' | 'week' | 'month' | 'quarter' | 'year' | 'all' = 'month',
+        platform?: string,
+        companyId?: string,
+        productId?: string
+    ): Promise<OverviewMetricsResponse> {
+        const params = new URLSearchParams({
+            organizationId,
+            period
+        });
+        if (platform) params.append('platform', platform);
+        if (companyId) params.append('companyId', companyId);
+        if (productId) params.append('productId', productId);
+
+        const response = await httpClient.get<ApiResponse<OverviewMetricsResponse>>(
+            `${API_BASE_URLS.analytics}/api/v1/analytics/overview?${params}`
+        );
+        return response.data;
+    },
+
+    /**
+     * Get engagement breakdown
+     */
+    async getEngagementBreakdown(
+        organizationId: string,
+        period: 'day' | 'week' | 'month' | 'quarter' | 'year' | 'all' = 'month',
+        platform?: string
+    ): Promise<EngagementBreakdownResponse> {
+        const params = new URLSearchParams({
+            organizationId,
+            period
+        });
+        if (platform) params.append('platform', platform);
+
+        const response = await httpClient.get<ApiResponse<EngagementBreakdownResponse>>(
+            `${API_BASE_URLS.analytics}/api/v1/analytics/engagement?${params}`
+        );
+        return response.data;
+    },
+
+    /**
+     * Get comparison metrics (current vs previous period)
+     */
+    async getComparison(
+        organizationId: string,
+        period: 'day' | 'week' | 'month' | 'quarter' | 'year' | 'all' = 'month',
+        platform?: string
+    ): Promise<ComparisonMetricsResponse> {
+        const params = new URLSearchParams({
+            organizationId,
+            period
+        });
+        if (platform) params.append('platform', platform);
+
+        const response = await httpClient.get<ApiResponse<ComparisonMetricsResponse>>(
+            `${API_BASE_URLS.analytics}/api/v1/analytics/comparison?${params}`
+        );
+        return response.data;
+    },
+
+    /**
+     * Get post-specific metrics
+     */
+    async getPostMetrics(postPlatformId: string): Promise<AnalyticsMetrics> {
+        const response = await httpClient.get<ApiResponse<AnalyticsMetrics>>(
+            `${API_BASE_URLS.analytics}/api/v1/analytics/posts/${postPlatformId}`
+        );
+        return response.data;
+    },
+
+    /**
+     * Get organization-level metrics (raw data)
+     */
+    async getOrganizationMetrics(
+        organizationId: string,
+        platform?: string,
         startDate?: string,
-        endDate?: string
-    ): Promise<{
-        totalPosts: number;
-        totalEngagement: number;
-        avgEngagementRate: number;
-        topPlatform: string;
-        growth: number;
-    }> {
+        endDate?: string,
+        limit?: number,
+        offset?: number
+    ): Promise<AnalyticsMetrics[]> {
         const params = new URLSearchParams({ organizationId });
+        if (platform) params.append('platform', platform);
         if (startDate) params.append('startDate', startDate);
         if (endDate) params.append('endDate', endDate);
+        if (limit) params.append('limit', limit.toString());
+        if (offset) params.append('offset', offset.toString());
 
-        const response = await httpClient.get<ApiResponse<{
-            totalPosts: number;
-            totalEngagement: number;
-            avgEngagementRate: number;
-            topPlatform: string;
-            growth: number;
-        }>>(
-            `${API_BASE_URLS.analytics}/api/v1/overview?${params}`
+        const response = await httpClient.get<ApiResponse<AnalyticsMetrics[]>>(
+            `${API_BASE_URLS.analytics}/api/v1/analytics/metrics?${params}`
+        );
+        return response.data;
+    },
+
+    /**
+     * Get aggregated metrics by period
+     */
+    async getAggregatedMetrics(
+        organizationId: string,
+        period: 'daily' | 'weekly' | 'monthly' = 'daily',
+        platform?: string,
+        limit: number = 30
+    ): Promise<AggregatedMetricsResponse[]> {
+        const params = new URLSearchParams({
+            organizationId,
+            period,
+            limit: limit.toString()
+        });
+        if (platform) params.append('platform', platform);
+
+        const response = await httpClient.get<ApiResponse<AggregatedMetricsResponse[]>>(
+            `${API_BASE_URLS.analytics}/api/v1/analytics/aggregated?${params}`
+        );
+        return response.data;
+    },
+
+    /**
+     * Get account-specific metrics
+     */
+    async getAccountMetrics(socialAccountId: string): Promise<AccountMetricsResponse> {
+        const response = await httpClient.get<ApiResponse<AccountMetricsResponse>>(
+            `${API_BASE_URLS.analytics}/api/v1/analytics/accounts/${socialAccountId}`
         );
         return response.data;
     },
@@ -657,9 +1112,130 @@ export const aiApi = {
     },
 };
 
+// =============================================================================
+// Engagement API (External Social Media Interactions)
+// =============================================================================
+
+interface EngagementFilters {
+    platform?: string;
+    status?: 'unread' | 'read' | 'replied' | 'archived' | 'spam';
+    sentiment?: 'positive' | 'neutral' | 'negative' | 'question';
+    assignedTo?: string;
+    postId?: string;
+    search?: string;
+    page?: number;
+    perPage?: number;
+}
+
+interface UpdateEngagementRequest {
+    status?: 'unread' | 'read' | 'replied' | 'archived' | 'spam';
+    assignedTo?: string | null;
+    internalNotes?: string;
+    sentiment?: 'positive' | 'neutral' | 'negative' | 'question';
+}
+
+interface ReplyToEngagementRequest {
+    content: string;
+    mediaUrls?: string[];
+}
+
+export const engagementApi = {
+    /**
+     * Get all engagements with filters
+     */
+    async getEngagements(filters?: EngagementFilters) {
+        const queryParams = new URLSearchParams();
+
+        if (filters?.platform) queryParams.append('platform', filters.platform);
+        if (filters?.status) queryParams.append('status', filters.status);
+        if (filters?.sentiment) queryParams.append('sentiment', filters.sentiment);
+        if (filters?.assignedTo) queryParams.append('assignedTo', filters.assignedTo);
+        if (filters?.postId) queryParams.append('postId', filters.postId);
+        if (filters?.search) queryParams.append('search', filters.search);
+        if (filters?.page) queryParams.append('page', filters.page.toString());
+        if (filters?.perPage) queryParams.append('perPage', filters.perPage.toString());
+
+        const url = `${API_BASE_URLS.engagement}/api/v1/engagements${queryParams.toString() ? `?${queryParams.toString()}` : ''
+            }`;
+
+        return httpClient.get<{
+            data: ExternalComment[];
+            meta: {
+                total: number;
+                page: number;
+                perPage: number;
+                totalPages: number;
+                unreadCount: number;
+            };
+        }>(url);
+    },
+
+    /**
+     * Get single engagement by ID
+     */
+    async getEngagement(id: string) {
+        const response = await httpClient.get<ApiResponse<ExternalComment>>(
+            `${API_BASE_URLS.engagement}/api/v1/engagements/${id}`
+        );
+        return response.data;
+    },
+
+    /**
+     * Get engagement thread (parent + children + responses)
+     */
+    async getEngagementThread(id: string) {
+        const response = await httpClient.get<ApiResponse<{
+            engagement: ExternalComment;
+            childEngagements: ExternalComment[];
+            ourResponses: ExternalCommentReply[];
+        }>>(
+            `${API_BASE_URLS.engagement}/api/v1/engagements/${id}/thread`
+        );
+        return response.data;
+    },
+
+    /**
+     * Update engagement (status, assignment, notes)
+     */
+    async updateEngagement(id: string, updates: UpdateEngagementRequest) {
+        const response = await httpClient.put<ApiResponse<ExternalComment>>(
+            `${API_BASE_URLS.engagement}/api/v1/engagements/${id}`,
+            updates
+        );
+        return response.data;
+    },
+
+    /**
+     * Reply to an engagement
+     */
+    async replyToEngagement(id: string, reply: ReplyToEngagementRequest) {
+        const response = await httpClient.post<ApiResponse<ExternalCommentReply>>(
+            `${API_BASE_URLS.engagement}/api/v1/engagements/${id}/reply`,
+            reply
+        );
+        return response.data;
+    },
+
+    /**
+     * Manually sync engagements from platforms
+     */
+    async syncEngagements(platform?: string, postIds?: string[]) {
+        const response = await httpClient.post<ApiResponse<{
+            message: string;
+            note?: string;
+        }>>(
+            `${API_BASE_URLS.engagement}/api/v1/engagements/sync`,
+            { platform, postIds }
+        );
+        return response.data;
+    },
+};
+
 // Export all APIs as a single object
 export const apiClient = {
     organizations: organizationsApi,
+    companies: companiesApi,
+    products: productsApi,
     socialAccounts: socialAccountsApi,
     posts: postsApi,
     comments: commentsApi,
@@ -670,6 +1246,7 @@ export const apiClient = {
     campaigns: campaignsApi,
     workflow: workflowApi,
     ai: aiApi,
+    engagement: engagementApi,
     // Expose auth token setter
     setAuthToken: (token: string | null) => httpClient.setAuthToken(token),
 };

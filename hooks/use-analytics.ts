@@ -1,33 +1,41 @@
 import { useState, useEffect } from 'react';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useOrganization } from '@/contexts/organization-context';
+import { useContextParams } from './use-context-params';
 import { apiClient } from '@/lib/api-client';
-import {
-    mockOverviewMetrics,
-    mockPlatformMetrics,
-    mockTrendData,
-    type OverviewMetrics,
-    type PlatformMetrics,
-    type TrendDataPoint,
-} from '@/data/analytics';
-import type { Post } from '@/types';
+import type {
+    OverviewMetricsResponse,
+    PlatformMetricsResponse,
+    TrendDataResponse,
+    TopPostResponse
+} from '@/types';
 
 interface AnalyticsData {
-    overview: OverviewMetrics;
-    platforms: PlatformMetrics[];
-    trends: TrendDataPoint[];
-    topPosts: Post[];
+    overview: OverviewMetricsResponse | null;
+    platforms: PlatformMetricsResponse[];
+    trends: TrendDataResponse[];
+    topPosts: TopPostResponse[];
     isLoading: boolean;
+    error: Error | null;
 }
 
+/**
+ * Hook to fetch and manage analytics data
+ * 
+ * @param period - Time period for analytics ('day', 'week', 'month', 'quarter', 'year', 'all')
+ * @param platform - Optional platform filter
+ */
 export function useAnalytics(
-    dateRange: { start: Date; end: Date }
+    period: 'day' | 'week' | 'month' | 'quarter' | 'year' | 'all' = 'month',
+    platform?: string
 ): AnalyticsData {
     const { organizationId } = useOrganization();
+    const { companyId, productId } = useContextParams();
     const [isLoading, setIsLoading] = useState(true);
-    const [data, setData] = useState<Omit<AnalyticsData, 'isLoading'>>({
-        overview: mockOverviewMetrics,
-        platforms: mockPlatformMetrics,
-        trends: mockTrendData,
+    const [error, setError] = useState<Error | null>(null);
+    const [data, setData] = useState<Omit<AnalyticsData, 'isLoading' | 'error'>>({
+        overview: null,
+        platforms: [],
+        trends: [],
         topPosts: [],
     });
 
@@ -40,31 +48,37 @@ export function useAnalytics(
 
             try {
                 setIsLoading(true);
+                setError(null);
 
-                // Fetch posts from API (analytics mock data used until analytics API is ready)
-                const { posts: publishedPosts } = await apiClient.posts.getAll(organizationId, { status: 'published' });
-
-                // Get top 5 posts
-                const topPosts = publishedPosts.slice(0, 5);
+                // Fetch overview metrics from Analytics API with context filtering
+                const overview = await apiClient.analytics.getOverview(
+                    organizationId,
+                    period,
+                    platform,
+                    companyId,
+                    productId
+                );
 
                 setData({
-                    overview: mockOverviewMetrics,
-                    platforms: mockPlatformMetrics,
-                    trends: mockTrendData,
-                    topPosts,
+                    overview,
+                    platforms: overview.platformBreakdown,
+                    trends: overview.trends,
+                    topPosts: overview.topPosts,
                 });
-            } catch (error) {
-                console.error('Failed to load analytics:', error);
+            } catch (err) {
+                console.error('Failed to load analytics:', err);
+                setError(err instanceof Error ? err : new Error('Failed to load analytics'));
             } finally {
                 setIsLoading(false);
             }
         };
 
         loadAnalytics();
-    }, [organizationId, dateRange]);
+    }, [organizationId, period, platform, companyId, productId]);
 
     return {
         ...data,
         isLoading,
+        error,
     };
 }

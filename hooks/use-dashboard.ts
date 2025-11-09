@@ -3,7 +3,8 @@
 import { useMemo } from 'react';
 import { usePosts } from './use-posts';
 import { useSocialAccounts } from './use-social-accounts';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useOrganization } from '@/contexts/organization-context';
+import { useContextParams } from './use-context-params';
 import type { StatCardData } from '@/app/(dashboard)/dashboard/components/stats-grid';
 import type { Activity } from '@/app/(dashboard)/dashboard/components/activity-item';
 
@@ -15,9 +16,17 @@ interface DashboardData {
 
 export function useDashboard(): DashboardData {
     const { organizationId } = useOrganization();
+    const { companyId, productId } = useContextParams();
+
     // Fetch data from API (only if we have an org ID)
-    const { posts, isLoading: postsLoading } = usePosts(organizationId ?? undefined);
-    const { accounts, isLoading: accountsLoading } = useSocialAccounts(organizationId ?? undefined);
+    const { posts, isLoading: postsLoading } = usePosts(organizationId ?? undefined, {
+        companyId,
+        productId,
+    });
+    const { accounts, isLoading: accountsLoading } = useSocialAccounts(organizationId ?? undefined, {
+        companyId,
+        productId,
+    });
 
     const isLoading = postsLoading || accountsLoading;
 

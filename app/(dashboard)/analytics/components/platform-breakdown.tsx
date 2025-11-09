@@ -1,7 +1,7 @@
-import type { PlatformMetrics as PlatformMetricsType } from '@/data/analytics';
+import type { PlatformMetricsResponse } from '@/types';
 
 interface PlatformBreakdownProps {
-    platforms: PlatformMetricsType[];
+    platforms: PlatformMetricsResponse[];
 }
 
 const PLATFORM_ICONS: Record<string, string> = {
@@ -30,6 +30,21 @@ export function PlatformBreakdown({ platforms }: PlatformBreakdownProps) {
         if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
         return num.toString();
     };
+
+    // Handle empty data
+    if (!platforms || platforms.length === 0) {
+        return (
+            <div className="card bg-base-100 shadow-lg">
+                <div className="card-body text-center py-12">
+                    <i className="fa-solid fa-duotone fa-share-nodes text-6xl opacity-20 mb-4"></i>
+                    <h3 className="font-bold text-xl mb-2">No Platform Data Yet</h3>
+                    <p className="opacity-70">
+                        Connect social accounts and publish posts to see platform-specific performance
+                    </p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -63,7 +78,7 @@ export function PlatformBreakdown({ platforms }: PlatformBreakdownProps) {
                         <div className="mt-3">
                             <div className="flex items-center justify-between mb-1">
                                 <span className="text-sm opacity-70">Engagement Rate</span>
-                                <span className="font-bold text-primary">{platform.engagementRate}%</span>
+                                <span className="font-bold text-primary">{platform.engagementRate.toFixed(2)}%</span>
                             </div>
                             <progress
                                 className="progress progress-primary w-full"
@@ -72,13 +87,10 @@ export function PlatformBreakdown({ platforms }: PlatformBreakdownProps) {
                             ></progress>
                         </div>
 
-                        {/* Top Post */}
+                        {/* Impressions */}
                         <div className="mt-3 pt-3 border-t border-base-300">
-                            <div className="text-xs opacity-70 mb-1">Top Post</div>
-                            <div className="text-sm line-clamp-2">{platform.topPost.content}</div>
-                            <div className="text-xs opacity-70 mt-1">
-                                {formatNumber(platform.topPost.engagement)} engagements
-                            </div>
+                            <div className="text-xs opacity-70 mb-1">Total Impressions</div>
+                            <div className="text-lg font-bold">{formatNumber(platform.impressions)}</div>
                         </div>
                     </div>
                 </div>

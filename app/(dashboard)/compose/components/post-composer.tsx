@@ -12,7 +12,7 @@ import { EditProductModal } from '../../brands/components/edit-product-modal';
 import { useSocialAccounts } from '@/hooks/use-social-accounts';
 import { useBrandProfile } from '@/hooks/use-brand-profile';
 import { aiApiClient } from '@/lib/ai-api-client';
-import { useToast } from '@/contexts/ToastContext';
+import { useToast } from '@/contexts/toast-context';
 import { getPlatformConfig, getPlatformName } from '@/lib/platform-config';
 import type { CaptionVariation } from '@/lib/ai-api-client';
 import type { SocialPlatform, Product, Company } from '@/types';

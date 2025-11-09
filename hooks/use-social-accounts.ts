@@ -1,60 +1,83 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useOrganization } from '@/contexts/organization-context';
 import { apiClient } from '@/lib/api-client';
-import { mockAccountMetrics, type AccountMetrics } from '@/data/social-accounts';
-import type { SocialAccount } from '@/types';
+import type { SocialAccount, AccountMetricsResponse } from '@/types';
+
+interface UseSocialAccountsOptions {
+    companyId?: string;
+    productId?: string;
+}
 
 interface UseSocialAccountsReturn {
     accounts: SocialAccount[];
-    metrics: Map<string, AccountMetrics>;
+    metrics: Map<string, AccountMetricsResponse>;
     isLoading: boolean;
     activeAccounts: SocialAccount[];
     expiredAccounts: SocialAccount[];
     disconnectedAccounts: SocialAccount[];
     disconnectAccount: (accountId: string) => void;
     reconnectAccount: (accountId: string) => void;
+    refetch: () => Promise<void>;
 }
 
-export function useSocialAccounts(orgId?: string): UseSocialAccountsReturn {
+export function useSocialAccounts(orgId?: string, options?: UseSocialAccountsOptions): UseSocialAccountsReturn {
     const { organizationId: contextOrgId } = useOrganization();
     const organizationId = orgId || contextOrgId;
 
     const [accounts, setAccounts] = useState<SocialAccount[]>([]);
+    const [accountMetrics, setAccountMetrics] = useState<Map<string, AccountMetricsResponse>>(new Map());
     const [isLoading, setIsLoading] = useState(true);
 
+    const loadAccounts = async () => {
+        if (!organizationId) {
+            setAccounts([]);
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            setIsLoading(true);
+
+            // Load accounts with context filtering
+            const data = await apiClient.socialAccounts.getAll(organizationId, {
+                companyId: options?.companyId,
+                productId: options?.productId,
+            });
+            setAccounts(data);
+
+            // Load metrics for each account
+            const metricsMap = new Map<string, AccountMetricsResponse>();
+            await Promise.allSettled(
+                data.map(async (account) => {
+                    try {
+                        const metrics = await apiClient.analytics.getAccountMetrics(account.id);
+                        metricsMap.set(account.id, metrics);
+                    } catch (error) {
+                        console.warn(`Failed to load metrics for account ${account.id}:`, error);
+                        // Continue even if metrics fail for individual accounts
+                    }
+                })
+            );
+            setAccountMetrics(metricsMap);
+        } catch (error) {
+            console.error('Error loading social accounts:', error);
+            setAccounts([]);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const loadAccounts = async () => {
-            if (!organizationId) {
-                setAccounts([]);
-                setIsLoading(false);
-                return;
-            }
-
-            try {
-                setIsLoading(true);
-                const data = await apiClient.socialAccounts.getAll(organizationId);
-                setAccounts(data);
-            } catch (error) {
-                console.error('Error loading social accounts:', error);
-                setAccounts([]);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
         loadAccounts();
-    }, [organizationId]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [organizationId, options?.companyId, options?.productId]);
 
-    // Create metrics map
+    // Create metrics map (already loaded from API above)
     const metrics = useMemo(() => {
-        const map = new Map<string, AccountMetrics>();
-        mockAccountMetrics.forEach(metric => {
-            map.set(metric.accountId, metric);
-        });
-        return map;
-    }, []);
+        return accountMetrics;
+    }, [accountMetrics]);
 
     // Categorize accounts
     const activeAccounts = useMemo(() => {
@@ -108,5 +131,6 @@ export function useSocialAccounts(orgId?: string): UseSocialAccountsReturn {
         disconnectedAccounts,
         disconnectAccount,
         reconnectAccount,
+        refetch: loadAccounts,
     };
 }

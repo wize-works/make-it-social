@@ -150,6 +150,131 @@ export interface AnalyticsMetrics {
     fetchedAt: Date;
 }
 
+export interface OverviewMetricsResponse {
+    organizationId: string;
+    period: string;
+    startDate: string;
+    endDate: string;
+    totalPosts: number;
+    totalImpressions: number;
+    totalReach: number;
+    totalEngagement: number;
+    avgEngagementRate: number;
+    platformBreakdown: PlatformMetricsResponse[];
+    trends: TrendDataResponse[];
+    topPosts: TopPostResponse[];
+}
+
+export interface PlatformMetricsResponse {
+    platform: string;
+    posts: number;
+    impressions: number;
+    reach: number;
+    engagement: number;
+    engagementRate: number;
+}
+
+export interface TrendDataResponse {
+    date: string;
+    impressions: number;
+    reach: number;
+    engagement: number;
+    posts: number;
+}
+
+export interface TopPostResponse {
+    postId: string;
+    platform: string;
+    content: string;
+    publishedAt: string;
+    impressions: number;
+    reach: number;
+    engagement: number;
+    engagementRate: number;
+}
+
+export interface EngagementBreakdownResponse {
+    organizationId: string;
+    platform?: string;
+    period: string;
+    likes: number;
+    comments: number;
+    shares: number;
+    clicks: number;
+    saves: number;
+    views: number;
+    likesPercentage: number;
+    commentsPercentage: number;
+    sharesPercentage: number;
+    clicksPercentage: number;
+    savesPercentage: number;
+    viewsPercentage: number;
+}
+
+export interface ComparisonMetricsResponse {
+    current: PeriodMetrics;
+    previous: PeriodMetrics;
+    changes: MetricChanges;
+}
+
+export interface PeriodMetrics {
+    posts: number;
+    impressions: number;
+    reach: number;
+    engagement: number;
+    engagementRate: number;
+}
+
+export interface MetricChanges {
+    posts: number;
+    postsPercentage: number;
+    impressions: number;
+    impressionsPercentage: number;
+    reach: number;
+    reachPercentage: number;
+    engagement: number;
+    engagementPercentage: number;
+    engagementRate: number;
+    engagementRatePercentage: number;
+}
+
+export interface AggregatedMetricsResponse {
+    id: string;
+    organizationId: string;
+    platform?: string;
+    period: string;
+    periodStart: string;
+    periodEnd: string;
+    totalPosts: number;
+    totalImpressions: number;
+    totalReach: number;
+    totalEngagement: number;
+    avgEngagementRate: number;
+    totalLikes: number;
+    totalComments: number;
+    totalShares: number;
+    totalClicks: number;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface AccountMetricsResponse {
+    id: string;
+    socialAccountId: string;
+    organizationId: string;
+    platform: string;
+    followers: number;
+    followerGrowth: number;
+    followerGrowthRate: number;
+    avgEngagementRate: number;
+    totalPosts: number;
+    totalImpressions: number;
+    totalReach: number;
+    collectedAt: string;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export interface Campaign {
     id: string;
     organizationId: string;
@@ -231,3 +356,34 @@ export interface Notification {
     link?: string;
     createdAt: Date;
 }
+
+// Re-export engagement types for API client
+export type { Comment, CommentReply, CommentThread } from './engagement';
+
+// Re-export enhanced company types
+export type {
+    VisualIdentity,
+    ContentStrategy,
+    MarketContext,
+    CompanyWithStats,
+    CreateCompanyData,
+    UpdateCompanyData,
+} from './company';
+
+// Re-export product types
+export type {
+    Product as ProductEnhanced,
+    CreateProductData,
+    UpdateProductData,
+    ProductWithCompany,
+    ProductAttributes,
+} from './product';
+
+// Re-export hierarchy types
+export type {
+    PostWithHierarchy,
+    SocialAccountWithContext,
+    ActiveContext,
+    ContextLevel,
+    ContextPermissions,
+} from './hierarchy';

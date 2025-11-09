@@ -1,4 +1,4 @@
-import type { Company } from '@/types';
+import type { Company } from '@/types/company';
 
 interface CompanyCardProps {
     company: Company;
@@ -27,9 +27,9 @@ export function CompanyCard({ company, isSelected, onClick, onEdit, onDelete }: 
                 <div className="flex items-start justify-between">
                     <div className="flex-1">
                         <h3 className="font-semibold text-base mb-1 flex items-center gap-2">
-                            {company.logo ? (
+                            {company.logoUrl ? (
                                 <img
-                                    src={company.logo}
+                                    src={company.logoUrl}
                                     alt={company.name}
                                     className="w-6 h-6 rounded"
                                 />
@@ -38,28 +38,28 @@ export function CompanyCard({ company, isSelected, onClick, onEdit, onDelete }: 
                             )}
                             {company.name}
                         </h3>
-                        {company.isPersonal && (
-                            <span className="badge badge-primary badge-xs">Personal</span>
-                        )}
                         {company.industry && (
                             <p className="text-xs text-base-content/60 mt-1">{company.industry}</p>
                         )}
-                        {/* Brand Colors Preview */}
-                        {company.brandColors && company.brandColors.length > 0 && (
+                        {/* Brand Colors Preview - using visualIdentity from API */}
+                        {company.visualIdentity?.primary_colors && company.visualIdentity.primary_colors.length > 0 && (
                             <div className="flex gap-1 mt-2">
-                                {company.brandColors.slice(0, 5).map(color => (
+                                {company.visualIdentity.primary_colors.slice(0, 3).map((color, index) => (
                                     <div
-                                        key={color.id}
+                                        key={index}
                                         className="w-4 h-4 rounded-full border border-base-300"
-                                        style={{ backgroundColor: color.value }}
-                                        title={`${color.value}`}
+                                        style={{ backgroundColor: color }}
+                                        title={color}
                                     ></div>
                                 ))}
-                                {company.brandColors.length > 5 && (
-                                    <div className="text-xs text-base-content/60 flex items-center">
-                                        +{company.brandColors.length - 5}
-                                    </div>
-                                )}
+                                {company.visualIdentity.secondary_colors?.slice(0, 2).map((color, index) => (
+                                    <div
+                                        key={`sec-${index}`}
+                                        className="w-4 h-4 rounded-full border border-base-300"
+                                        style={{ backgroundColor: color }}
+                                        title={color}
+                                    ></div>
+                                ))}
                             </div>
                         )}
                     </div>
@@ -83,25 +83,15 @@ export function CompanyCard({ company, isSelected, onClick, onEdit, onDelete }: 
                                         Edit Company
                                     </button>
                                 </li>
-                                {!company.isPersonal && (
-                                    <li>
-                                        <button
-                                            onClick={(e) => handleMenuClick(e, 'delete')}
-                                            className="text-error"
-                                        >
-                                            <i className="fa-solid fa-duotone fa-trash"></i>
-                                            Delete Company
-                                        </button>
-                                    </li>
-                                )}
-                                {company.isPersonal && (
-                                    <li className="disabled">
-                                        <span className="text-base-content/40 text-xs">
-                                            <i className="fa-solid fa-duotone fa-lock"></i>
-                                            Cannot delete personal company
-                                        </span>
-                                    </li>
-                                )}
+                                <li>
+                                    <button
+                                        onClick={(e) => handleMenuClick(e, 'delete')}
+                                        className="text-error"
+                                    >
+                                        <i className="fa-solid fa-duotone fa-trash"></i>
+                                        Delete Company
+                                    </button>
+                                </li>
                             </ul>
                         </div>
                     </div>

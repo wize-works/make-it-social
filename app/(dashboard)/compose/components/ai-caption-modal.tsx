@@ -8,7 +8,7 @@
 import { useState, useEffect } from 'react';
 import { aiApiClient, type CaptionVariation } from '@/lib/ai-api-client';
 import { useBrandProfile } from '@/hooks/use-brand-profile';
-import { useOrganization } from '@/contexts/OrganizationContext';
+import { useOrganization } from '@/contexts/organization-context';
 import type { Company, Product } from '@/types';
 
 interface AICaptionModalProps {

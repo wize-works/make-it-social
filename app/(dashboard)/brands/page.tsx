@@ -2,8 +2,10 @@
 
 import { useState, useMemo } from 'react';
 import { useBrandProfile } from '@/hooks/use-brand-profile';
-import { useOrganization } from '@/contexts/OrganizationContext';
-import type { Company, Product } from '@/types';
+import { useActiveContext } from '@/contexts/active-context-provider';
+import { apiClient } from '@/lib/api-client';
+import type { Company as CompanyAPI } from '@/types/company';
+import type { Product } from '@/types';
 import { CompanyCard } from './components/company-card';
 import { ProductCard } from './components/product-card';
 import { AddCompanyModal } from './components/add-company-modal';
@@ -12,17 +14,18 @@ import { EditCompanyModal } from './components/edit-company-modal';
 import { DeleteCompanyModal } from './components/delete-company-modal';
 
 export default function BrandsPage() {
-    const { organizationId } = useOrganization();
-    const { companies, products: allProducts } = useBrandProfile(organizationId || undefined);
+    const { activeContext } = useActiveContext();
+    const organizationId = activeContext?.organizationId;
+    const { companies, products: allProducts, refetch } = useBrandProfile(organizationId || undefined);
 
     // Use derived state for selected company - first company if none selected
-    const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+    const [selectedCompany, setSelectedCompany] = useState<CompanyAPI | null>(null);
     const [isAddCompanyModalOpen, setIsAddCompanyModalOpen] = useState(false);
     const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
     const [isEditCompanyModalOpen, setIsEditCompanyModalOpen] = useState(false);
     const [isDeleteCompanyModalOpen, setIsDeleteCompanyModalOpen] = useState(false);
-    const [companyToEdit, setCompanyToEdit] = useState<Company | null>(null);
-    const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+    const [companyToEdit, setCompanyToEdit] = useState<CompanyAPI | null>(null);
+    const [companyToDelete, setCompanyToDelete] = useState<CompanyAPI | null>(null);
 
     // Derive effective selected company
     const effectiveSelectedCompany = selectedCompany || (companies.length > 0 ? companies[0] : null);
@@ -33,37 +36,53 @@ export default function BrandsPage() {
         return allProducts.filter((p: Product) => p.companyId === effectiveSelectedCompany.id);
     }, [effectiveSelectedCompany, allProducts]);
 
-    const handleCompanySelect = (company: Company) => {
+    const handleCompanySelect = (company: CompanyAPI) => {
         setSelectedCompany(company);
     };
 
-    const handleEditCompany = (company: Company) => {
+    const handleEditCompany = (company: CompanyAPI) => {
         setCompanyToEdit(company);
         setIsEditCompanyModalOpen(true);
     };
 
-    const handleDeleteCompany = (company: Company) => {
+    const handleDeleteCompany = (company: CompanyAPI) => {
         setCompanyToDelete(company);
         setIsDeleteCompanyModalOpen(true);
     };
 
-    const handleSaveCompany = (updatedCompany: Company) => {
-        // TODO: Update company in state/backend
-        console.log('Saving company:', updatedCompany);
+    const handleSaveCompany = async (updatedCompany: CompanyAPI) => {
+        try {
+            // Update company in database
+            await apiClient.companies.update(updatedCompany.id, updatedCompany);
 
-        // If the edited company is selected, update selected company
-        if (effectiveSelectedCompany?.id === updatedCompany.id) {
-            setSelectedCompany(updatedCompany);
+            // If the edited company is selected, update selected company
+            if (effectiveSelectedCompany?.id === updatedCompany.id) {
+                setSelectedCompany(updatedCompany);
+            }
+
+            // Refresh the company list
+            refetch();
+        } catch (error) {
+            console.error('Failed to update company:', error);
+            // TODO: Show error toast notification
         }
     };
 
-    const handleConfirmDelete = (company: Company) => {
-        // TODO: Delete company from state/backend
-        console.log('Deleting company:', company);
+    const handleConfirmDelete = async (company: CompanyAPI) => {
+        try {
+            // Delete company from database
+            await apiClient.companies.delete(company.id);
 
-        // If deleted company was selected, clear selection
-        if (effectiveSelectedCompany?.id === company.id) {
-            setSelectedCompany(null);
+            // If deleted company was selected, clear selection
+            if (effectiveSelectedCompany?.id === company.id) {
+                setSelectedCompany(null);
+            }
+
+            // Refresh the company list
+            refetch();
+        } catch (error) {
+            console.error('Failed to delete company:', error);
+            // TODO: Show error toast notification
         }
     };
 
@@ -131,9 +150,6 @@ export default function BrandsPage() {
                                             Products for {effectiveSelectedCompany.name}
                                         </h2>
                                         <p className="text-sm text-base-content/70">
-                                            {effectiveSelectedCompany.isPersonal && (
-                                                <span className="badge badge-sm badge-primary mr-2">Personal</span>
-                                            )}
                                             {products.length} {products.length === 1 ? 'product' : 'products'}
                                         </p>
                                     </div>
@@ -189,7 +205,10 @@ export default function BrandsPage() {
                 {/* Modals */}
                 <AddCompanyModal
                     isOpen={isAddCompanyModalOpen}
-                    onClose={() => setIsAddCompanyModalOpen(false)}
+                    onClose={() => {
+                        setIsAddCompanyModalOpen(false);
+                        refetch(); // Reload companies after adding
+                    }}
                 />
                 <AddProductModal
                     isOpen={isAddProductModalOpen}
@@ -201,16 +220,21 @@ export default function BrandsPage() {
                         setIsAddProductModalOpen(false);
                     }}
                 />
+                {/* Type mismatch between Company definitions - will be fixed when types are unified */}
                 <EditCompanyModal
                     isOpen={isEditCompanyModalOpen}
                     onClose={() => setIsEditCompanyModalOpen(false)}
+                    // @ts-expect-error - Type mismatch
                     company={companyToEdit}
+                    // @ts-expect-error - Type mismatch
                     onSave={handleSaveCompany}
                 />
                 <DeleteCompanyModal
                     isOpen={isDeleteCompanyModalOpen}
                     onClose={() => setIsDeleteCompanyModalOpen(false)}
+                    // @ts-expect-error - Type mismatch
                     company={companyToDelete}
+                    // @ts-expect-error - Type mismatch
                     onConfirm={handleConfirmDelete}
                 />
             </main>

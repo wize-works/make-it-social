@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
-import { useToast } from '@/contexts/ToastContext';
+import { useToast } from '@/contexts/toast-context';
 import { ALL_PLATFORMS } from '@/lib/platform-config';
+import { useAuth, useOrganization as useClerkOrganization } from '@clerk/nextjs';
 
 interface AddAccountModalProps {
     onClose: () => void;
@@ -21,18 +22,60 @@ export function AddAccountModal({ onClose }: AddAccountModalProps) {
     const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
     const [isConnecting, setIsConnecting] = useState(false);
     const { showToast } = useToast();
+    const { getToken } = useAuth();
+    const { organization } = useClerkOrganization();
 
     const handleConnect = async () => {
         if (!selectedPlatform) return;
 
+        if (!organization) {
+            showToast('Please select an organization first', 'error');
+            return;
+        }
+
         setIsConnecting(true);
 
-        // Simulate OAuth flow
-        setTimeout(() => {
-            showToast(`${platforms.find(p => p.id === selectedPlatform)?.name} account connected successfully!`, 'success');
+        try {
+            // Get the current page URL to return to after OAuth
+            const returnUrl = `${window.location.origin}/accounts`;
+
+            // Get token with organization context
+            const token = await getToken();
+
+            if (!token) {
+                throw new Error('Not authenticated');
+            }
+
+            // Call the backend API to initiate OAuth flow
+            const response = await fetch(
+                `http://localhost:3003/api/v1/social-accounts/${selectedPlatform}/connect`,
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`,
+                    },
+                    body: JSON.stringify({ returnUrl }),
+                }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error?.message || 'Failed to initiate OAuth flow');
+            }
+
+            const data = await response.json();
+
+            // Redirect to the platform's authorization URL
+            window.location.href = data.data.authorizationUrl;
+        } catch (error) {
+            console.error('Failed to connect account:', error);
+            showToast(
+                error instanceof Error ? error.message : 'Failed to connect account',
+                'error'
+            );
             setIsConnecting(false);
-            onClose();
-        }, 1500);
+        }
     };
 
     return (
@@ -71,7 +114,7 @@ export function AddAccountModal({ onClose }: AddAccountModalProps) {
 
                 {/* Info Alert */}
                 <div className="alert alert-info mb-6">
-                    <i className="fa-solid fa-circle-info"></i>
+                    <i className="fa-solid fa-duotone fa-circle-info"></i>
                     <div>
                         <p className="font-semibold">OAuth Authentication</p>
                         <p className="text-sm">
@@ -101,7 +144,7 @@ export function AddAccountModal({ onClose }: AddAccountModalProps) {
                             </>
                         ) : (
                             <>
-                                <i className="fa-solid fa-link"></i>
+                                <i className="fa-solid fa-duotone fa-link"></i>
                                 Connect Account
                             </>
                         )}

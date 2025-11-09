@@ -42,7 +42,7 @@ export function PostEngagementModal({ post, isOpen, onClose }: PostEngagementMod
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="font-bold text-2xl">Post Details</h3>
                     <button className="btn btn-sm btn-circle btn-ghost" onClick={onClose}>
-                        <i className="fa-solid fa-xmark"></i>
+                        <i className="fa-solid fa-duotone fa-xmark"></i>
                     </button>
                 </div>
 
@@ -125,7 +125,7 @@ export function PostEngagementModal({ post, isOpen, onClose }: PostEngagementMod
                                     <div className="card bg-base-200">
                                         <div className="card-body text-center">
                                             <div className="text-4xl mb-2">
-                                                <i className="fa-solid fa-comments"></i>
+                                                <i className="fa-solid fa-duotone fa-comments"></i>
                                             </div>
                                             <p className="text-base-content/60">No comments yet</p>
                                         </div>

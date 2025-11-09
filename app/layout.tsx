@@ -3,12 +3,13 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
 import { ClerkProvider } from '@clerk/nextjs';
-import { ToastProvider } from "@/contexts/ToastContext";
+import { ToastProvider } from "@/contexts/toast-context";
 import { ToastContainer } from "@/components/toast";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { AuthProvider } from "@/components/auth-provider";
-import { OrganizationProvider } from "@/contexts/OrganizationContext";
+import { OrganizationProvider } from "@/contexts/organization-context";
+import { ActiveContextWrapper } from "@/components/active-context-wrapper";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -56,12 +57,14 @@ export default function RootLayout({
                 >
                     <AuthProvider>
                         <OrganizationProvider>
-                            <SiteHeader />
-                            <ToastProvider>
-                                {children}
-                                <ToastContainer />
-                            </ToastProvider>
-                            <SiteFooter />
+                            <ActiveContextWrapper>
+                                <SiteHeader />
+                                <ToastProvider>
+                                    {children}
+                                    <ToastContainer />
+                                </ToastProvider>
+                                <SiteFooter />
+                            </ActiveContextWrapper>
                         </OrganizationProvider>
                     </AuthProvider>
                 </body>

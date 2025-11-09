@@ -1,12 +1,13 @@
 'use client';
 
-import { useAuth, useUser } from '@clerk/nextjs';
+import { useAuth, useUser, useClerk } from '@clerk/nextjs';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 
 export default function OnboardingPage() {
     const { getToken, isLoaded: authLoaded } = useAuth();
     const { user, isLoaded: userLoaded } = useUser();
+    const { setActive } = useClerk();
     const router = useRouter();
     const [isCreating, setIsCreating] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -29,13 +30,6 @@ export default function OnboardingPage() {
             setIsCreating(true);
             setError(null);
 
-            // Get Clerk JWT token
-            const token = await getToken();
-
-            if (!token) {
-                throw new Error('Not authenticated');
-            }
-
             // Generate slug from org name
             const slug = orgName
                 .toLowerCase()
@@ -43,8 +37,15 @@ export default function OnboardingPage() {
                 .replace(/^-|-$/g, '')
                 + `-${Date.now().toString().slice(-6)}`;
 
-            // Call auth-api to create organization
-            const response = await fetch(`${process.env.NEXT_PUBLIC_AUTH_API_URL}/api/v1/organizations`, {
+            // Get JWT token for auth-api
+            const token = await getToken({ template: 'make-it-social-api' });
+
+            if (!token) {
+                throw new Error('Failed to get authentication token');
+            }
+
+            // Create organization via auth-api (handles both Clerk and database)
+            const response = await fetch(`${process.env.NEXT_PUBLIC_AUTH_API_URL || 'http://localhost:3002'}/api/v1/organizations`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -59,11 +60,22 @@ export default function OnboardingPage() {
 
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error?.message || 'Failed to create workspace');
+                throw new Error(errorData.error?.message || 'Failed to create organization');
             }
 
-            const data = await response.json();
-            console.log('Organization created:', data.data);
+            const { data: organization } = await response.json();
+            const clerkOrgId = organization.clerkOrganizationId;
+
+            console.log('Organization created:', organization.id, 'Clerk ID:', clerkOrgId);
+
+            // Set the newly created organization as active using Clerk's setActive
+            if (clerkOrgId) {
+                await setActive({ organization: clerkOrgId });
+                console.log('Set active organization:', clerkOrgId);
+            }
+
+            // Small delay to ensure Clerk state updates
+            await new Promise(resolve => setTimeout(resolve, 500));
 
             // Redirect to dashboard
             router.push('/dashboard');

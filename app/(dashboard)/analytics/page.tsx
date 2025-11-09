@@ -9,23 +9,14 @@ import { DateRangeSelector } from './components/date-range-selector';
 import { useAnalytics } from '@/hooks/use-analytics';
 
 export default function AnalyticsPage() {
+    const [period] = useState<'day' | 'week' | 'month' | 'quarter' | 'year' | 'all'>('month');
+    const [platform] = useState<string | undefined>(undefined);
     const [dateRange, setDateRange] = useState<{ start: Date; end: Date }>({
-        start: new Date(new Date().setDate(new Date().getDate() - 7)),
+        start: new Date(new Date().setDate(new Date().getDate() - 30)),
         end: new Date(),
     });
 
-    const { overview, platforms, trends, topPosts, isLoading } = useAnalytics(dateRange);
-
-    if (isLoading) {
-        return (
-            <div className="min-h-screen bg-base-100 flex items-center justify-center">
-                <div className="text-center">
-                    <span className="loading loading-spinner loading-lg text-primary"></span>
-                    <p className="mt-4 opacity-70">Loading analytics...</p>
-                </div>
-            </div>
-        );
-    }
+    const { overview, platforms, trends, topPosts, isLoading, error } = useAnalytics(period, platform);
 
     return (
         <div className="min-h-screen">
@@ -46,10 +37,29 @@ export default function AnalyticsPage() {
                     />
                 </div>
 
+                {/* Error State */}
+                {error && (
+                    <div className="alert alert-error mb-8">
+                        <i className="fa-solid fa-duotone fa-exclamation-triangle"></i>
+                        <div>
+                            <h3 className="font-bold">Failed to load analytics</h3>
+                            <div className="text-sm">{error.message}</div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Loading Overlay */}
+                {isLoading && (
+                    <div className="mb-8 text-center py-4">
+                        <span className="loading loading-spinner loading-lg text-primary"></span>
+                        <p className="mt-2 opacity-70">Loading analytics data...</p>
+                    </div>
+                )}
+
                 {/* Overview Metrics */}
                 <div className="mb-8">
                     <h2 className="text-xl font-bold mb-4">Overview</h2>
-                    <OverviewMetrics metrics={overview} />
+                    <OverviewMetrics metrics={overview} isLoading={isLoading} />
                 </div>
 
                 {/* Engagement Trend Chart */}

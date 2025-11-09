@@ -6,7 +6,7 @@ import { CalendarHeader } from './components/calendar-header';
 import { CalendarGrid } from './components/calendar-grid';
 import { PostDetailModal } from './components/post-detail-modal';
 import { useCalendar } from '@/hooks/use-calendar';
-import { useToast } from '@/contexts/ToastContext';
+import { useToast } from '@/contexts/toast-context';
 
 export default function CalendarPage() {
     const {

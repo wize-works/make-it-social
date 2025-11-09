@@ -12,6 +12,8 @@ interface UsePostsOptions {
     status?: string;
     page?: number;
     perPage?: number;
+    companyId?: string;
+    productId?: string;
 }
 
 export function usePosts(organizationId?: string, options?: UsePostsOptions) {

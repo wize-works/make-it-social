@@ -118,7 +118,7 @@ export default function InboxPage() {
                         <div className="card bg-base-200">
                             <div className="card-body items-center text-center">
                                 <div className="text-6xl mb-4">
-                                    <i className="fa-solid fa-inbox"></i>
+                                    <i className="fa-solid fa-duotone fa-inbox"></i>
                                 </div>
                                 <h2 className="card-title">No comments found</h2>
                                 <p className="text-base-content/60">

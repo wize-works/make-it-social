@@ -5,33 +5,34 @@
   color-scheme: light;
   prefersdark: false;
 
-  /* Core brand palette */
-  --color-primary:            #EC3C4E; /* Raspberry Red */
-  --color-primary-content:    #F4F6F9;
 
-  --color-secondary:          #24B5C9; /* Deep Teal */
-  --color-secondary-content:  #F4F6F9;
+  /* Brand palette — Retro Pop Social */
+  --color-primary:            #05639E;
+  --color-primary-content:    #FFFEFC;
 
-  --color-accent:             #F7D060; /* Muted Gold */
-  --color-accent-content:     #0F1115;
+  --color-secondary:          #429E81;
+  --color-secondary-content:  #FFFEFC;
 
-  --color-neutral:            #0F1115; /* Carbon (headlines, borders) */
-  --color-neutral-content:    #F4F6F9;
+  --color-accent:             #884477;
+  --color-accent-content:     #FFFEFC;
 
-  /* Base surfaces (calm paper) */
-  --color-base-100:           #F9F6F3; /* Parchment */
-  --color-base-200:           #EFEAE4; /* deeper paper tint */
-  --color-base-300:           #E6DFD7; /* card/elevated */
-  --color-base-content:       #14161B; /* ink on light */
+  --color-neutral:            #2E2A27;
+  --color-neutral-content:    #FFFEFC;
 
-  /* Feedback / status (restrained, accessible) */
-  --color-info:               #3AA0FF; /* calm editorial blue */
-  --color-info-content:       #F4F6F9;
-  --color-success:            #2ED07F; /* classic green */
-  --color-success-content:    #0B0D10;
-  --color-warning:            #FFB84A; /* toned amber */
+  /* Base surfaces — Aged Paper vibe */
+  --color-base-100:           #FBF6F0;
+  --color-base-200:           #F5EAD9;
+  --color-base-300:           #EBD4B2;
+  --color-base-content:       #1C1A18;
+
+  /* Feedback / status — bright, social, readable */
+  --color-info:               #5B95D7;
+  --color-info-content:       #ffffff;
+  --color-success:            #618B25;
+  --color-success-content:    #d0dae5;
+  --color-warning:            #FF9933;
   --color-warning-content:    #0B0D10;
-  --color-error:              #FF5C73; /* deeper raspberry for errors */
+  --color-error:              #960018;
   --color-error-content:      #FFFFFF;
 
   /* Shape + motion */

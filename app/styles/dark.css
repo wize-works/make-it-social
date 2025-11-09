@@ -6,32 +6,32 @@
   prefersdark: false;
 
   /* Core brand palette (contrast-tuned for dark) */
-  --color-primary:            #EC3C4E; /* Raspberry Red boosted */
-  --color-primary-content:    #F4F6F9;
+  --color-primary:            #05639E; /* Raspberry Red boosted */
+  --color-primary-content:    #FFFEFC;
 
-  --color-secondary:          #24B5C9; /* Deep Teal brightened for legibility */
-  --color-secondary-content:  #F4F6F9;
+  --color-secondary:          #429E81; /* Deep Teal brightened for legibility */
+  --color-secondary-content:  #FFFEFC;
 
-  --color-accent:             #F7D060; /* Muted Gold (unchanged) */
-  --color-accent-content:     #0F1115;
+  --color-accent:             #884477; /* Muted Gold (unchanged) */
+  --color-accent-content:     #FFFEFC;
 
   --color-neutral:            #0F1115; /* Warm light text on dark */
-  --color-neutral-content:    #0F1115;
+  --color-neutral-content:    #FFFEFC;
 
   /* Base surfaces (rich ink-inspired tones) */
-  --color-base-100:           #0F1115; /* Carbon base */
-  --color-base-200:           #171A1E; /* elevated card */
-  --color-base-300:           #20242B; /* higher elevation */
+  --color-base-100:           #202020; /* Carbon base */
+  --color-base-200:           #1c1c1c; /* elevated card */
+  --color-base-300:           #181818; /* higher elevation */
   --color-base-content:       #F4F6F9; /* clean text */
 
   /* Feedback / status */
-  --color-info:               #3AA0FF; /* balanced blue */
+  --color-info:               #5B95D7; /* balanced blue */
   --color-info-content:       #0B0D10;
-  --color-success:            #2ED07F; /* muted green */
+  --color-success:            #618B25; /* muted green */
   --color-success-content:    #0B0D10;
-  --color-warning:            #FFB84A; /* refined amber */
+  --color-warning:            #FF9933; /* refined amber */
   --color-warning-content:    #0B0D10;
-  --color-error:              #FF5C73; /* consistent raspberry */
+  --color-error:              #960018; /* consistent raspberry */
   --color-error-content:      #FFFFFF;
 
   /* Shape + motion (match light) */

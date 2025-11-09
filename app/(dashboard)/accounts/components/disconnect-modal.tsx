@@ -13,7 +13,7 @@ export function DisconnectModal({ onConfirm, onCancel }: DisconnectModalProps) {
                 </p>
 
                 <div className="alert alert-warning mb-6">
-                    <i className="fa-solid fa-triangle-exclamation"></i>
+                    <i className="fa-solid fa-duotone fa-triangle-exclamation"></i>
                     <div>
                         <p className="font-semibold">Warning</p>
                         <p className="text-sm">
@@ -33,7 +33,7 @@ export function DisconnectModal({ onConfirm, onCancel }: DisconnectModalProps) {
                         className="btn btn-error"
                         onClick={onConfirm}
                     >
-                        <i className="fa-solid fa-link-slash"></i>
+                        <i className="fa-solid fa-duotone fa-link-slash"></i>
                         Disconnect
                     </button>
                 </div>

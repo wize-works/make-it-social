@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import type { Company, BrandColor } from '@/types';
+import { uploadCompanyLogo, uploadCompanyIcon } from '@/lib/storage';
 
 interface EditCompanyModalProps {
     isOpen: boolean;
@@ -28,36 +29,88 @@ export function EditCompanyModal({ isOpen, onClose, company, onSave }: EditCompa
     const [brandColors, setBrandColors] = useState<BrandColor[]>(company?.brandColors || []);
     const [activeTab, setActiveTab] = useState<'details' | 'branding' | 'profile'>('details');
 
+    // Track file objects for upload
+    const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [iconFile, setIconFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+
     const logoInputRef = useRef<HTMLInputElement>(null);
     const iconInputRef = useRef<HTMLInputElement>(null);
 
+    // Update form data when company prop changes
+    useEffect(() => {
+        if (company) {
+            setFormData({
+                name: company.name || '',
+                industry: company.industry || '',
+                website: company.website || '',
+                description: company.description || '',
+                // Map logoUrl from API Company to logo for form (API uses logoUrl, old type uses logo)
+                logo: 'logoUrl' in company ? (company as { logoUrl?: string }).logoUrl : company.logo,
+                icon: company.icon,
+                brandVoice: company.brandVoice || '',
+                targetAudience: company.targetAudience || '',
+                restrictedTopics: company.restrictedTopics?.join(', ') || '',
+                preferredHashtags: company.preferredHashtags?.join(', ') || '',
+            });
+            setBrandColors(company.brandColors || []);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [company?.id]); // Only re-run when company ID changes
+
     if (!isOpen || !company) return null;
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        setIsUploading(true);
+        setUploadError(null);
 
-        const updatedCompany: Company = {
-            ...company,
-            name: formData.name,
-            industry: formData.industry || undefined,
-            website: formData.website || undefined,
-            description: formData.description || undefined,
-            logo: formData.logo,
-            icon: formData.icon,
-            brandColors: brandColors.length > 0 ? brandColors : undefined,
-            brandVoice: formData.brandVoice || undefined,
-            targetAudience: formData.targetAudience || undefined,
-            restrictedTopics: formData.restrictedTopics
-                ? formData.restrictedTopics.split(',').map(t => t.trim()).filter(Boolean)
-                : undefined,
-            preferredHashtags: formData.preferredHashtags
-                ? formData.preferredHashtags.split(',').map(t => t.trim()).filter(Boolean)
-                : undefined,
-            updatedAt: new Date(),
-        };
+        try {
+            let logoUrl = formData.logo;
+            let iconUrl = formData.icon;
 
-        onSave(updatedCompany);
-        onClose();
+            // Upload logo file if a new one was selected
+            if (logoFile) {
+                const result = await uploadCompanyLogo(logoFile, company.id, company.organizationId);
+                logoUrl = result.url;
+            }
+
+            // Upload icon file if a new one was selected
+            if (iconFile) {
+                const result = await uploadCompanyIcon(iconFile, company.id, company.organizationId);
+                iconUrl = result.url;
+            }
+
+            const updatedCompany: Company = {
+                ...company,
+                name: formData.name,
+                industry: formData.industry || undefined,
+                website: formData.website || undefined,
+                description: formData.description || undefined,
+                logo: logoUrl,
+                icon: iconUrl,
+                brandColors: brandColors.length > 0 ? brandColors : undefined,
+                brandVoice: formData.brandVoice || undefined,
+                targetAudience: formData.targetAudience || undefined,
+                restrictedTopics: formData.restrictedTopics
+                    ? formData.restrictedTopics.split(',').map(t => t.trim()).filter(Boolean)
+                    : undefined,
+                preferredHashtags: formData.preferredHashtags
+                    ? formData.preferredHashtags.split(',').map(t => t.trim()).filter(Boolean)
+                    : undefined,
+                updatedAt: new Date(),
+            };
+
+            onSave(updatedCompany);
+            onClose();
+        } catch (error) {
+            console.error('Failed to upload files:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Failed to upload files. Please try again.';
+            setUploadError(errorMessage);
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     const handleChange = (field: string, value: string) => {
@@ -75,8 +128,29 @@ export function EditCompanyModal({ isOpen, onClose, company, onSave }: EditCompa
     const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // TODO: Upload file and get URL
-            // For now, create a local URL
+            // Clear any previous errors
+            setUploadError(null);
+
+            // Basic client-side validation
+            const MAX_LOGO_SIZE = 10 * 1024 * 1024; // 10MB
+            const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/svg+xml'];
+
+            if (!ALLOWED_TYPES.includes(file.type)) {
+                setUploadError(`Invalid logo file type. Please use: JPEG, PNG, WebP, or SVG`);
+                e.target.value = ''; // Reset input
+                return;
+            }
+
+            if (file.size > MAX_LOGO_SIZE) {
+                const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+                setUploadError(`Logo file too large (${sizeMB}MB). Maximum size: 10MB`);
+                e.target.value = ''; // Reset input
+                return;
+            }
+
+            // Store the file for upload on submit
+            setLogoFile(file);
+            // Create blob URL for preview
             const url = URL.createObjectURL(file);
             setFormData(prev => ({ ...prev, logo: url }));
         }
@@ -85,7 +159,29 @@ export function EditCompanyModal({ isOpen, onClose, company, onSave }: EditCompa
     const handleIconChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            // TODO: Upload file and get URL
+            // Clear any previous errors
+            setUploadError(null);
+
+            // Basic client-side validation
+            const MAX_ICON_SIZE = 2 * 1024 * 1024; // 2MB
+            const ALLOWED_TYPES = ['image/png', 'image/x-icon', 'image/vnd.microsoft.icon', 'image/svg+xml'];
+
+            if (!ALLOWED_TYPES.includes(file.type)) {
+                setUploadError(`Invalid icon file type. Please use: PNG, ICO, or SVG`);
+                e.target.value = ''; // Reset input
+                return;
+            }
+
+            if (file.size > MAX_ICON_SIZE) {
+                const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+                setUploadError(`Icon file too large (${sizeMB}MB). Maximum size: 2MB`);
+                e.target.value = ''; // Reset input
+                return;
+            }
+
+            // Store the file for upload on submit
+            setIconFile(file);
+            // Create blob URL for preview
             const url = URL.createObjectURL(file);
             setFormData(prev => ({ ...prev, icon: url }));
         }
@@ -105,7 +201,8 @@ export function EditCompanyModal({ isOpen, onClose, company, onSave }: EditCompa
         <div className="modal modal-open">
             <div className="modal-box max-w-2xl max-h-[90vh]">
                 <h3 className="font-bold text-lg mb-2">Edit Company</h3>
-                {company.isPersonal && (
+                {/* isPersonal field doesn't exist in API Company type */}
+                {'isPersonal' in company && company.isPersonal && (
                     <div className="alert alert-info mb-4">
                         <i className="fa-solid fa-duotone fa-circle-info"></i>
                         <span className="text-sm">This is your personal company</span>
@@ -431,13 +528,37 @@ export function EditCompanyModal({ isOpen, onClose, company, onSave }: EditCompa
                         )}
                     </div>
 
+                    {/* Error Alert */}
+                    {uploadError && (
+                        <div className="alert alert-error mb-4">
+                            <i className="fa-solid fa-duotone fa-circle-exclamation"></i>
+                            <span>{uploadError}</span>
+                            <button
+                                type="button"
+                                className="btn btn-sm btn-ghost"
+                                onClick={() => setUploadError(null)}
+                            >
+                                <i className="fa-solid fa-duotone fa-xmark"></i>
+                            </button>
+                        </div>
+                    )}
+
                     <div className="modal-action">
-                        <button type="button" className="btn btn-ghost" onClick={onClose}>
+                        <button type="button" className="btn btn-ghost" onClick={onClose} disabled={isUploading}>
                             Cancel
                         </button>
-                        <button type="submit" className="btn btn-primary">
-                            <i className="fa-solid fa-duotone fa-duotone fa-floppy-disk mr-2"></i>
-                            Save Changes
+                        <button type="submit" className="btn btn-primary" disabled={isUploading}>
+                            {isUploading ? (
+                                <>
+                                    <span className="loading loading-spinner loading-sm"></span>
+                                    Uploading...
+                                </>
+                            ) : (
+                                <>
+                                    <i className="fa-solid fa-duotone fa-duotone fa-floppy-disk mr-2"></i>
+                                    Save Changes
+                                </>
+                            )}
                         </button>
                     </div>
                 </form>
