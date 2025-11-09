@@ -91,22 +91,22 @@ async function getAuthToken(): Promise<string | null> {
             console.error('Failed to get Clerk token:', error);
         }
     }
-    
+
     // Fallback: try to get from cookies
     const cookies = document.cookie.split(';');
-    
+
     // Clerk uses different cookie names depending on configuration
     // Try common patterns
-    const clerkCookie = cookies.find(c => 
-        c.trim().startsWith('__clerk_db_jwt') || 
+    const clerkCookie = cookies.find(c =>
+        c.trim().startsWith('__clerk_db_jwt') ||
         c.trim().startsWith('__session=') ||
         c.trim().startsWith('clerk-db-jwt')
     );
-    
+
     if (clerkCookie) {
         return clerkCookie.split('=')[1];
     }
-    
+
     return null;
 }
 
